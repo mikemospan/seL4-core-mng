@@ -128,7 +128,6 @@ static void gicv3_enable_sre(void)
     isb();
 }
 
-
 BOOT_CODE static void dist_init(void)
 {
     /* Check that the distributor is enabled */
@@ -311,7 +310,6 @@ void ipi_send_target(irq_t irq, word_t cpuTargetList)
     SYSTEM_WRITE_64(ICC_SGI1R_EL1, sgi1r_base | cpuTargetList);
     isb();
 }
-#ifdef ENABLE_SMP_SUPPORT
 #define MPIDR_MT(x)   (x & BIT(24))
 
 
@@ -326,7 +324,6 @@ void setIRQTarget(irq_t irq, seL4_Word target)
     gic_dist->iroutern[hw_irq - SPI_START] = MPIDR_AFF_MASK(mpidr_map[target]);
 }
 
-#endif /* ENABLE_SMP_SUPPORT */
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 
