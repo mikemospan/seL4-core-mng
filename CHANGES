@@ -65,6 +65,10 @@ Upcoming release: BREAKING
   optimization.
 * Added SMC Capability (smc_cap) and SMC forwarding for aarch64 platforms. See
   [RFC-9](https://sel4.atlassian.net/browse/RFC-9).
+* Arm+Hyp: Enabled access to seL4_VCPUReg_VMPIDR and seL4_VCPUReg_VMPIDR_EL2 for all hyp configurations.
+  Previously this register was only accessible for SMP kernel configurations. Non-SMP configurations can still require
+  access when wanting to control the value of MPIDR that the guest reads. Each VCPU is initialized with the value of
+  MPIDR of the core it is created on which should provide a legal value to the guest.
 
 ## Upgrade Notes
 
