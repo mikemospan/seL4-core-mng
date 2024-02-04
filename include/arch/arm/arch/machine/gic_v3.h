@@ -33,7 +33,6 @@
 #define GIC_SGI_TARGET_MASK_BITS 16
 
 /* Register bits */
-#define GICD_CTL_ENABLE 0x1
 #define GICD_CTLR_RWP                BIT(31)
 #define GICD_CTLR_ARE_NS             BIT(4)
 #define GICD_CTLR_ENABLE_G1NS         BIT(1)
