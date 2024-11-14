@@ -147,6 +147,12 @@ block smc_cap {
 }
 #endif
 
+block pmu_control_cap {
+    field capPMUBadge   64
+    field capType       5
+    padding             59
+}
+
 -- NB: odd numbers are arch caps (see isArchCap())
 tagged_union cap capType {
     -- 5-bit tag caps
@@ -187,6 +193,7 @@ tagged_union cap capType {
 #ifndef CONFIG_ENABLE_SMP_SUPPORT
     tag sgi_signal_cap              27
 #endif
+    tag pmu_control_cap                     28
 }
 
 ---- Arch-independent object types
