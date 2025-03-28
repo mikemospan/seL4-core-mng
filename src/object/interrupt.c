@@ -119,6 +119,11 @@ exception_t decodeIRQHandlerInvocation(word_t invLabel, irq_t irq)
         return EXCEPTION_NONE;
     }
 
+    case IRQSetIRQCore:
+        setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
+        invokeIRQHandler_SetIRQCore(irq, getSyscallArg(0, NULL));
+        return EXCEPTION_NONE;
+
     case IRQClearIRQHandler:
         setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
         invokeIRQHandler_ClearIRQHandler(irq);
@@ -172,6 +177,11 @@ void invokeIRQHandler_SetIRQHandler(irq_t irq, cap_t cap, cte_t *slot)
     /** GHOSTUPD: "(True, gs_set_assn cteDeleteOne_'proc (-1))" */
     cteDeleteOne(irqSlot);
     cteInsert(cap, slot, irqSlot);
+}
+
+void invokeIRQHandler_SetIRQCore(irq_t irq, word_t core)
+{
+    setIRQTarget(irq, core);
 }
 
 void invokeIRQHandler_ClearIRQHandler(irq_t irq)
