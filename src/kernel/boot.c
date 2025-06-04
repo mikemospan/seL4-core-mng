@@ -889,10 +889,12 @@ BOOT_CODE static bool_t check_available_memory(word_t n_available,
 
 
 BOOT_CODE static bool_t check_reserved_memory(word_t n_reserved,
-                                              const region_t *reserved)
+                                              region_t *reserved)
 {
     printf("reserved virt address space regions: %"SEL4_PRIu_word"\n",
            n_reserved);
+
+    _Bool needs_sort = false;
     /* Force ordering and exclusivity of reserved regions. */
     for (word_t i = 0; i < n_reserved; i++) {
         const region_t *r = &reserved[i];
@@ -907,8 +909,23 @@ BOOT_CODE static bool_t check_reserved_memory(word_t n_reserved,
         /* Regions must be ordered and must not overlap. Regions are [start..end),
            so the == case is fine. Directly adjacent regions are allowed. */
         if ((i > 0) && (r->start < reserved[i - 1].end)) {
-            printf("ERROR: reserved region %"SEL4_PRIu_word" in wrong order\n", i);
-            return false;
+            printf("WARNING: reserved region %"SEL4_PRIu_word" in wrong order\n", i);
+            needs_sort = true;
+        }
+    }
+
+    if (needs_sort) {
+        printf("Sorted reserved regions...\n");
+        word_t pos = 0;
+        while (pos < n_reserved) {
+            if (pos == 0 || reserved[pos].start >= reserved[pos - 1].end) {
+                pos += 1;
+            } else {
+                region_t temp = reserved[pos];
+                reserved[pos] = reserved[pos - 1];
+                reserved[pos - 1] = temp;
+                pos -= 1;
+            }
         }
     }
 
@@ -922,8 +939,8 @@ BOOT_BSS static region_t avail_reg[MAX_NUM_FREEMEM_REG];
  * Dynamically initialise the available memory on the platform.
  * A region represents an area of memory.
  */
-BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
-                              word_t n_reserved, const region_t *reserved,
+BOOT_CODE bool_t init_freemem(word_t n_available, p_region_t *available,
+                              word_t n_reserved, region_t *reserved,
                               v_region_t it_v_reg, word_t extra_bi_size_bits)
 {
 
