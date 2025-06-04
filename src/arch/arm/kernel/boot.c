@@ -46,20 +46,8 @@ BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
                                           word_t extra_bi_size_bits)
 {
     /* reserve the kernel image region */
-    reserved[0] = paddr_to_pptr_reg(get_p_reg_kernel_img());
 
-    int index = 1;
-
-    /* add the dtb region, if it is not empty */
-    if (dtb_p_reg.start) {
-        if (index >= ARRAY_SIZE(reserved)) {
-            printf("ERROR: no slot to add DTB to reserved regions\n");
-            return false;
-        }
-        reserved[index].start = (pptr_t) paddr_to_pptr(dtb_p_reg.start);
-        reserved[index].end = (pptr_t) paddr_to_pptr(dtb_p_reg.end);
-        index++;
-    }
+    int index = 0;
 
     if (extra_device_p_reg.start) {
         /* the dtb region could be empty */
@@ -72,10 +60,8 @@ BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
      * only one mode-reserved region is supported, because this is all that is
      * needed.
      */
-    if (MODE_RESERVED > 1) {
-        printf("ERROR: MODE_RESERVED > 1 unsupported!\n");
-        return false;
-    }
+    compile_assert(mode_reserved_gt_1_unsupported, MODE_RESERVED <= 1);
+
     if (ui_p_reg.start < PADDR_TOP) {
         region_t ui_reg = paddr_to_pptr_reg(ui_p_reg);
         if (MODE_RESERVED == 1) {
@@ -113,12 +99,16 @@ BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
             index++;
         }
 
+        assert(false);
         /* Reserve the ui_p_reg region still so it doesn't get turned into device UT. */
         reserve_region(ui_p_reg);
     }
 
+    reserved[index] = paddr_to_pptr_reg(get_p_reg_kernel_img());
+    index += 1;
+
     /* avail_p_regs comes from the auto-generated code */
-    return init_freemem(ARRAY_SIZE(avail_p_regs), avail_p_regs,
+    return init_freemem(ARRAY_SIZE(avail_p_regs), (p_region_t *)avail_p_regs,
                         index, reserved,
                         it_v_reg, extra_bi_size_bits);
 }
