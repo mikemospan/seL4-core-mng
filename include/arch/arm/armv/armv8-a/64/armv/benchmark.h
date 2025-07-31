@@ -18,6 +18,7 @@
 
 static inline void armv_enableOverflowIRQ(void)
 {
+    printf("Enabling overflow irq\n");
     uint32_t val;
     MRS(PMINTENSET, val);
     val |= BIT(CCNT_INDEX);

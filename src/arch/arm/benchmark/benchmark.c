@@ -30,7 +30,7 @@ void arm_init_ccnt(void)
     /* turn on the cycle counter */
     SYSTEM_WRITE_WORD(PMCNTENSET, BIT(CCNT_INDEX));
 #endif
-
+    armv_enableOverflowIRQ();
 #ifdef CONFIG_ARM_ENABLE_PMU_OVERFLOW_INTERRUPT
     armv_enableOverflowIRQ();
 #endif /* CONFIG_ARM_ENABLE_PMU_OVERFLOW_INTERRUPT */
