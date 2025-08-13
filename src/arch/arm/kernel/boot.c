@@ -23,6 +23,7 @@
 #include <arch/machine/timer.h>
 #include <arch/machine/fpu.h>
 #include <arch/machine/tlb.h>
+#include <arch/profiling.h>
 
 #ifdef CONFIG_ARM_SMMU
 #include <drivers/smmu/smmuv2.h>
@@ -253,6 +254,9 @@ BOOT_CODE static bool_t init_cpu(void)
 #ifdef CONFIG_ENABLE_BENCHMARKS
     arm_init_ccnt();
 #endif /* CONFIG_ENABLE_BENCHMARKS */
+#ifdef CONFIG_PROFILER_ENABLE
+    arm_initProfiler();
+#endif /* CONFIG_PROFILER_ENABLE */
 
     /* Export selected CPU features for access by PL0 */
     armv_init_user_access();

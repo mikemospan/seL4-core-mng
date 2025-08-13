@@ -91,6 +91,16 @@ block VPPIEvent {
 }
 #endif
 
+#ifdef CONFIG_PROFILER_ENABLE
+block PMUEvent {
+    padding 704
+    field pc        64
+    field fp        64
+    padding         60
+    field seL4_FaultType 4
+}
+#endif
+
 #ifdef CONFIG_HARDWARE_DEBUG_API
 block DebugException {
     padding 576
