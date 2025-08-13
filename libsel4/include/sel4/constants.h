@@ -73,11 +73,14 @@ typedef enum {
 typedef enum {
     seL4_TCBFlag_NoFlag = 0x0,
     seL4_TCBFlag_fpuDisabled = 0x1,
-
+    seL4_TCBFlag_profile = 0x2,
     SEL4_FORCE_LONG_ENUM(seL4_TCBFlag),
     seL4_TCBFlag_MASK = seL4_TCBFlag_NoFlag
 #ifdef CONFIG_HAVE_FPU
                         | seL4_TCBFlag_fpuDisabled
+#endif
+#ifdef CONFIG_PROFILER_ENABLE
+                        | seL4_TCBFlag_profile
 #endif
 } seL4_TCBFlag;
 

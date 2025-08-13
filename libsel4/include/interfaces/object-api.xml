@@ -416,6 +416,7 @@
                 </description>
             </error>
         </method>
+
         <method id="TCBSetIPCBuffer" name="SetIPCBuffer" manual_name="Set IPC Buffer" manual_label="tcb_setipcbuffer">
             <brief>
                 Set a thread's IPC buffer

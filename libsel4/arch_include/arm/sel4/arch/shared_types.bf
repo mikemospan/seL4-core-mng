@@ -37,4 +37,7 @@ tagged_union seL4_Fault seL4_FaultType {
 #endif
 #endif
 
+#ifdef CONFIG_PROFILER_ENABLE
+    tag PMUEvent 10
+#endif
 }
