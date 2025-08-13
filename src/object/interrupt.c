@@ -20,6 +20,9 @@
 #include <machine/timer.h>
 #include <smp/ipi.h>
 
+// @kwinter: Is this where I should call into the profiling.c?
+#include <arch/profiling.h>
+
 exception_t decodeIRQControlInvocation(word_t invLabel, word_t length,
                                        cte_t *srcSlot, word_t *buffer)
 {
@@ -217,6 +220,14 @@ void handleInterrupt(irq_t irq)
         /* Merging the variable declaration and initialization into one line
          * requires an update in the proofs first. Might be a c89 legacy.
          */
+        #if defined(CONFIG_PROFILER_ENABLE) && defined(KERNEL_PMU_IRQ)
+        if (IRQT_TO_IRQ(irq) == KERNEL_PMU_IRQ && NODE_STATE(ksCurThread)->tcbFlags == seL4_TCBFlag_profile &&
+            isSchedulable(NODE_STATE(ksCurThread))) {
+            // Pass to overflow handler.
+            arm_handlePMUEvent();
+            break;
+        }
+        #endif
         cap_t cap;
         cap = intStateIRQNode[IRQT_TO_IDX(irq)].cap;
         if (cap_get_capType(cap) == cap_notification_cap &&

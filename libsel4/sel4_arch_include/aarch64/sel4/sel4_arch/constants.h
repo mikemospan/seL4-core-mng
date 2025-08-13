@@ -114,6 +114,14 @@ typedef enum {
     SEL4_FORCE_LONG_ENUM(seL4_VCPUReg),
 } seL4_VCPUReg;
 
+#ifdef CONFIG_PROFILER_ENABLE
+typedef enum {
+    seL4_PMUEvent_PC,
+    seL4_PMUEvent_FP,
+    SEL4_FORCE_LONG_ENUM(seL4_PMUEvent_Msg),
+} seL4_PMUEvent_Msg;
+#endif
+
 #ifdef CONFIG_KERNEL_MCS
 typedef enum {
     seL4_TimeoutReply_FaultIP,
