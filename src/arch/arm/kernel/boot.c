@@ -296,7 +296,13 @@ BOOT_CODE static bool_t try_init_kernel_secondary_core(void)
     NODE_LOCK_SYS;
 
     clock_sync_test();
+#ifdef CONFIG_ARCH_AARCH64
+    if (ksNumCPUs < CONFIG_MAX_NUM_NODES) {
+        ksNumCPUs++;
+    }
+#else
     ksNumCPUs++;
+#endif
 
     init_core_state(SchedulerAction_ResumeCurrentThread);
 

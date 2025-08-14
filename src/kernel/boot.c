@@ -798,18 +798,6 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap,
         }
     }
 
-    /* There is a part of the kernel (code/data) that is only needed for the
-     * boot process. We can create UT objects for these frames, so the memory
-     * can be reused.
-     */
-    region_t boot_mem_reuse_reg = paddr_to_pptr_reg(get_p_reg_kernel_img_boot());
-    if (!create_untypeds_for_region(root_cnode_cap, false, boot_mem_reuse_reg, first_untyped_slot)) {
-        printf("ERROR: creation of untypeds for recycled boot memory"
-               " [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"] failed\n",
-               boot_mem_reuse_reg.start, boot_mem_reuse_reg.end);
-        return false;
-    }
-
     /* convert remaining freemem into UT objects and provide the caps */
     for (word_t i = 0; i < ARRAY_SIZE(ndks_boot.freemem); i++) {
         region_t reg = ndks_boot.freemem[i];
