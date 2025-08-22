@@ -146,26 +146,6 @@
 		reg = < 0x00 0x40000000 0x00 0x80000000 >;
 	};
 
-	reserved-memory {
-		#address-cells = < 0x02 >;
-		#size-cells = < 0x02 >;
-		ranges;
-
-		linux,cma {
-			compatible = "shared-dma-pool";
-			reusable;
-			size = < 0x00 0x28000000 >;
-			alloc-ranges = < 0x00 0x40000000 0x00 0x60000000 >;
-			linux,cma-default;
-		};
-
-		rpmsg@0xb8000000 {
-			no-map;
-			reg = < 0x00 0xb8000000 0x00 0x400000 >;
-			linux,phandle = < 0x52 >;
-			phandle = < 0x52 >;
-		};
-	};
 
 	interrupt-controller@38800000 {
 		compatible = "arm,gic-v3";

@@ -161,6 +161,16 @@ description indicates whether it is SOURCE-COMPATIBLE, BINARY-COMPATIBLE, or BRE
     for the data caches and instruction caches underlying Normal memory and also access to the read-only cache-type
     register `CTR_EL0` that provides cache type information. The ArmV8-A architecture allows access from EL0 as fast
     cache maintenance operations improves DMA performance in user-level device drivers.
+* Optimize reading hardware timestamp for RISC-V platforms. The optimization is enabled with the new
+  `KernelRiscvUseClintMtime` configuration option which is enabled by default for all current RISC-V
+  platforms. With future RISC-V platforms, enabling this configuration option may not actually be an
+  optimization.
+* Added SMC Capability (smc_cap) and SMC forwarding for aarch64 platforms. See
+  [RFC-9](https://sel4.atlassian.net/browse/RFC-9).
+* Arm+Hyp: Enabled access to seL4_VCPUReg_VMPIDR and seL4_VCPUReg_VMPIDR_EL2 for all hyp configurations.
+  Previously this register was only accessible for SMP kernel configurations. Non-SMP configurations can still require
+  access when wanting to control the value of MPIDR that the guest reads. Each VCPU is initialized with the value of
+  MPIDR of the core it is created on which should provide a legal value to the guest.
 
     These instructions are a subset of the available cache maintenance instructions as they can only address lines by
     virtual address (VA). They also require that the VA provided refers to a valid mapping with at least read

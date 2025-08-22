@@ -40,71 +40,26 @@ word_t active_irq[CONFIG_MAX_NUM_NODES] = {IRQ_NONE};
  * for PPI are read only and return only the current processor as the target.
  * If this doesn't lead to a valid ID, we emit a warning and default to core 0.
  */
-BOOT_CODE static uint8_t infer_cpu_gic_id(int nirqs)
+BOOT_CODE static uint8_t infer_cpu_gic_id(void)
 {
-    word_t i;
-    uint32_t target = 0;
-    for (i = 0; i < nirqs; i += 4) {
-        target = gic_dist->targets[i >> 2];
-        target |= target >> 16;
-        target |= target >> 8;
-        if (target) {
-            break;
-        }
-    }
+    uint32_t target = gic_dist->targets[0] & 0xff;
     if (!target) {
         printf("Warning: Could not infer GIC interrupt target ID, assuming 0.\n");
         target = BIT(0);
     }
-    return target & 0xff;
+    return target;
 }
 
 BOOT_CODE static void dist_init(void)
 {
-    word_t i;
-    int nirqs = 32 * ((gic_dist->ic_type & 0x1f) + 1);
-    gic_dist->enable = 0;
-
-    for (i = 0; i < nirqs; i += 32) {
-        /* disable */
-        gic_dist->enable_clr[i >> 5] = IRQ_SET_ALL;
-        /* clear pending */
-        gic_dist->pending_clr[i >> 5] = IRQ_SET_ALL;
+    /* Check that the distributor is enabled */
+    printf("GIC addr is P: 0x%lx V: 0x%lx\n", pptr_to_paddr((const void *)gic_dist), (long unsigned int)gic_dist);
+    uint32_t ctlr = gic_dist->enable;
+    const uint32_t ctlr_mask = BIT(0);
+    if ((ctlr & ctlr_mask) != ctlr_mask) {
+        printf("GICv2: GICD_CTLR 0x%x: GICD_CTLR not initialized\n", ctlr);
+        halt();
     }
-
-    /* reset interrupts priority */
-    for (i = 32; i < nirqs; i += 4) {
-        if (config_set(CONFIG_ARM_HYPERVISOR_SUPPORT)) {
-            gic_dist->priority[i >> 2] = 0x80808080;
-        } else {
-            gic_dist->priority[i >> 2] = 0;
-        }
-    }
-
-    /*
-     * reset int target to current cpu
-     * We query which id that the GIC uses for us and use that.
-     */
-    uint8_t target = infer_cpu_gic_id(nirqs);
-    for (i = 0; i < nirqs; i += 4) {
-        gic_dist->targets[i >> 2] = TARGET_CPU_ALLINT(target);
-    }
-
-    /* level-triggered, 1-N */
-    for (i = 64; i < nirqs; i += 32) {
-        gic_dist->config[i >> 5] = 0x55555555;
-    }
-
-    /* group 0 for secure; group 1 for non-secure */
-    for (i = 0; i < nirqs; i += 32) {
-        if (config_set(CONFIG_ARM_HYPERVISOR_SUPPORT) && !config_set(CONFIG_PLAT_QEMU_ARM_VIRT)) {
-            gic_dist->security[i >> 5] = 0xffffffff;
-        } else {
-            gic_dist->security[i >> 5] = 0;
-        }
-    }
-    /* enable the int controller */
-    gic_dist->enable = 1;
 }
 
 BOOT_CODE static void cpu_iface_init(void)
@@ -174,7 +129,6 @@ BOOT_CODE void cpu_initLocalIRQController(void)
     cpu_iface_init();
 }
 
-#ifdef ENABLE_SMP_SUPPORT
 /*
 * 25-24: target lister filter
 * 0b00 - send the ipi to the CPU interfaces specified in the CPU target list
@@ -200,13 +154,18 @@ void ipi_send_target(irq_t irq, word_t cpuTargetList)
     gic_dist->sgi_control = (cpuTargetList << (GICD_SGIR_CPUTARGETLIST_SHIFT)) | (IRQT_TO_IRQ(
                                                                                       irq) << GICD_SGIR_SGIINTID_SHIFT);
 }
-
+#pragma GCC diagnostic push
+/* gcc 11 has issue with the implementation of this warning:
+ * https://gcc.gnu.org/bugzilla/show_bug.cgi?id=101854
+ */
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
 /*
  * Set CPU target for the interrupt if it's not a PPI
  */
 void setIRQTarget(irq_t irq, seL4_Word target)
 {
-    uint8_t targetList = 1 << target;
+
+    uint8_t targetList = infer_cpu_gic_id();
     uint8_t *targets = (void *)(gic_dist->targets);
     word_t hwIRQ = IRQT_TO_IRQ(irq);
 
@@ -217,7 +176,7 @@ void setIRQTarget(irq_t irq, seL4_Word target)
     }
     targets[hwIRQ] = targetList;
 }
-#endif /* ENABLE_SMP_SUPPORT */
+#pragma GCC diagnostic pop
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 

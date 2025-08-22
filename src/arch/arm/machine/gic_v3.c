@@ -111,11 +111,6 @@ static uint32_t gicv3_do_wait_for_rwp(volatile uint32_t *ctlr_addr)
     return ret;
 }
 
-static void gicv3_dist_wait_for_rwp(void)
-{
-    gicv3_do_wait_for_rwp(&gic_dist->ctlr);
-}
-
 static void gicv3_redist_wait_for_rwp(void)
 {
     gicv3_do_wait_for_rwp(&gic_rdist_map[CURRENT_CPU_INDEX()]->ctlr);
@@ -133,48 +128,14 @@ static void gicv3_enable_sre(void)
     isb();
 }
 
-
 BOOT_CODE static void dist_init(void)
 {
-    word_t i;
-    uint32_t type;
-    unsigned int nr_lines;
-    uint64_t affinity;
-    uint32_t priority;
-
-    /* Disable GIC Distributor */
-    gic_dist->ctlr = 0;
-    gicv3_dist_wait_for_rwp();
-
-    type = gic_dist->typer;
-
-    nr_lines = GIC_REG_WIDTH * ((type & GICD_TYPE_LINESNR) + 1);
-
-    /* Assume level-triggered */
-    for (i = SPI_START; i < nr_lines; i += 16) {
-        gic_dist->icfgrn[(i / 16)] = 0;
-    }
-
-    /* Default priority for global interrupts */
-    priority = (GIC_PRI_IRQ << 24 | GIC_PRI_IRQ << 16 | GIC_PRI_IRQ << 8 |
-                GIC_PRI_IRQ);
-    for (i = SPI_START; i < nr_lines; i += 4) {
-        gic_dist->ipriorityrn[(i / 4)] = priority;
-    }
-    /* Disable and clear all global interrupts */
-    for (i = SPI_START; i < nr_lines; i += 32) {
-        gic_dist->icenablern[(i / 32)] = IRQ_SET_ALL;
-        gic_dist->icpendrn[(i / 32)] = IRQ_SET_ALL;
-    }
-
-    /* Turn on the distributor */
-    gic_dist->ctlr = GICD_CTL_ENABLE | GICD_CTLR_ARE_NS | GICD_CTLR_ENABLE_G1NS | GICD_CTLR_ENABLE_G0;
-    gicv3_dist_wait_for_rwp();
-
-    /* Route all global IRQs to this CPU */
-    affinity = mpidr_to_gic_affinity();
-    for (i = SPI_START; i < nr_lines; i++) {
-        gic_dist->iroutern[i - SPI_START] = affinity;
+    /* Check that the distributor is enabled */
+    uint32_t ctlr = gic_dist->ctlr;
+    const uint32_t ctlr_mask = GICD_CTLR_ARE_NS | GICD_CTLR_ENABLE_G1NS;
+    if ((ctlr & ctlr_mask) != ctlr_mask) {
+        printf("GICv3: GICD_CTLR 0x%x: GICD_CTLR not initialized\n", ctlr);
+        halt();
     }
 }
 
@@ -276,9 +237,9 @@ BOOT_CODE static void cpu_iface_init(void)
     /* Set priority mask register: ICC_PMR_EL1 */
     SYSTEM_WRITE_WORD(ICC_PMR_EL1, DEFAULT_PMR_VALUE);
 
-    /* EOI drops priority and deactivates the interrupt: ICC_CTLR_EL1 */
+    /* EOI drops priority of the interrupt, deactivation happens separately: ICC_CTLR_EL1 */
     SYSTEM_READ_WORD(ICC_CTLR_EL1, icc_ctlr);
-    icc_ctlr &= ~GICC_CTLR_EL1_EOImode_drop;
+    icc_ctlr |= GICC_CTLR_EL1_EOImode_drop;
     SYSTEM_WRITE_WORD(ICC_CTLR_EL1, icc_ctlr);
 
     /* Enable Group1 interrupts: ICC_IGRPEN1_EL1 */
@@ -342,37 +303,15 @@ BOOT_CODE void cpu_initLocalIRQController(void)
     cpu_iface_init();
 }
 
-#ifdef ENABLE_SMP_SUPPORT
-#define MPIDR_MT(x)   (x & BIT(24))
-
 void ipi_send_target(irq_t irq, word_t cpuTargetList)
 {
     uint64_t sgi1r_base = ((word_t) IRQT_TO_IRQ(irq)) << ICC_SGI1R_INTID_SHIFT;
-    word_t sgi1r[CONFIG_MAX_NUM_NODES];
-    word_t last_aff1 = 0;
 
-    for (word_t i = 0; i < CONFIG_MAX_NUM_NODES; i++) {
-        sgi1r[i] = 0;
-        if (cpuTargetList & BIT(i)) {
-            word_t mpidr = mpidr_map[i];
-            word_t aff1 = MPIDR_AFF1(mpidr);
-            word_t aff0 = MPIDR_AFF0(mpidr);
-            // AFF1 is assumed to be contiguous and less than CONFIG_MAX_NUM_NODES.
-            // The targets are grouped by AFF1.
-            assert(aff1 >= 0 && aff1 < CONFIG_MAX_NUM_NODES);
-            sgi1r[aff1] |= sgi1r_base | (aff1 << ICC_SGI1R_AFF1_SHIFT) | (1 << aff0);
-            if (aff1 > last_aff1) {
-                last_aff1 = aff1;
-            }
-        }
-    }
-    for (word_t i = 0; i <= last_aff1; i++) {
-        if (sgi1r[i] != 0) {
-            SYSTEM_WRITE_64(ICC_SGI1R_EL1, sgi1r[i]);
-        }
-    }
+    SYSTEM_WRITE_64(ICC_SGI1R_EL1, sgi1r_base | cpuTargetList);
     isb();
 }
+#define MPIDR_MT(x)   (x & BIT(24))
+
 
 void setIRQTarget(irq_t irq, seL4_Word target)
 {
@@ -385,7 +324,6 @@ void setIRQTarget(irq_t irq, seL4_Word target)
     gic_dist->iroutern[hw_irq - SPI_START] = MPIDR_AFF_MASK(mpidr_map[target]);
 }
 
-#endif /* ENABLE_SMP_SUPPORT */
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 

@@ -825,6 +825,10 @@ static inline void armv_vcpu_init(vcpu_t *vcpu)
 {
     vcpu_write_reg(vcpu, seL4_VCPUReg_SCTLR, SCTLR_DEFAULT);
     vcpu_write_reg(vcpu, seL4_VCPUReg_ACTLR, ACTLR_DEFAULT);
+    word_t mpidr = 0;
+    MRC(MPIDR, mpidr);
+    vcpu_write_reg(vcpu, seL4_VCPUReg_VMPIDR, mpidr);
+
 }
 
 #define HSR_FPU_FAULT   (0x1fe0000a)
