@@ -56,6 +56,7 @@ static exception_t decodePMUControl_WriteEventCounter(word_t length, cap_t cap, 
 
     MSR(PMSELR_EL0, cnt_sel);
     MSR(PMXEVCNTR_EL0, value);
+    MSR(PMXEVTYPER_EL0, event);
 
     return EXCEPTION_NONE;
 }
@@ -137,7 +138,7 @@ static exception_t decodePMUControl_InterruptControl(word_t length, cap_t cap, w
 {
     seL4_Word interrupt_ctl = getSyscallArg(0, buffer);
 
-    MSR(PMINTENSET_EL1, val);
+    MSR(PMINTENSET_EL1, interrupt_ctl);
 
     return EXCEPTION_NONE;
 }
