@@ -287,6 +287,40 @@
             </error>
         </method>
 
+        <method id="PMUReadCycleCounter" name="ReadCycleCounter" manual_name="ReadCycleCounter" manual_label="pmucontrol_readcyclecounter">
+            <brief>
+                Read the PMU cycle counter.
+            </brief>
+            <description>
+                See <autoref label="sec:threads"/>
+            </description>
+            <return><errorenumdesc/></return>
+            <param dir="out" name="cycle_counter_value" type="seL4_Word"
+                description="Value read from the hardware counter." />
+            <error name="seL4_IllegalOperation">
+                <description>
+                    The <texttt text="_service"/> is a CPtr to a capability of the wrong type.
+                </description>
+            </error>
+        </method>
+
+        <method id="PMUWriteCycleCounter" name="WriteCycleCounter" manual_name="WriteCycleCounter" manual_label="pmucontrol_writecyclecounter">
+            <brief>
+                Write the PMU cycle counter value.
+            </brief>
+            <description>
+                See <autoref label="sec:threads"/>
+            </description>
+            <return><errorenumdesc/></return>
+            <param dir="in" name="counter_value" type="seL4_Word"
+                description="Value you wish to set the hardware counter to."/>
+            <error name="seL4_IllegalOperation">
+                <description>
+                    The <texttt text="_service"/> is a CPtr to a capability of the wrong type.
+                </description>
+            </error>
+        </method>
+
         <method id="PMUCounterControl" name="CounterControl" manual_name="CounterControl" manual_label="pmucontrol_countercontrol">
             <brief>
                 Start, stop or reset the PMU.
@@ -310,7 +344,7 @@
             </error>
         </method>
 
-        <method id="PMUInterruptValue" name="InterruptValue" manual_name="InterruptValue" manual_label="pmucontrol_interruptvalue">
+        <method id="PMUReadInterruptValue" name="ReadInterruptValue" manual_name="ReadInterruptValue" manual_label="pmucontrol_readinterruptvalue">
             <brief>
                 Get the interrupt value of the PMU.
             </brief>
@@ -320,6 +354,23 @@
             <return><errorenumdesc/></return>
             <param dir="out" name="interrupt_val" type="seL4_Word"
                 description="This is the return value of the interrupt value."/>
+            <error name="seL4_IllegalOperation">
+                <description>
+                    The <texttt text="_service"/> is a CPtr to a capability of the wrong type.
+                </description>
+            </error>
+        </method>
+
+        <method id="PMUWriteInterruptValue" name="WriteInterruptValue" manual_name="WriteInterruptValue" manual_label="pmucontrol_writeinterruptvalue">
+            <brief>
+                Write a value to the interrupt value register.
+            </brief>
+            <description>
+                See <autoref label="sec:threads"/>
+            </description>
+            <return><errorenumdesc/></return>
+            <param dir="in" name="interrupt_val" type="seL4_Word"
+                description="This is the value that will be written to the interrupt value register"/>
             <error name="seL4_IllegalOperation">
                 <description>
                     The <texttt text="_service"/> is a CPtr to a capability of the wrong type.
@@ -337,6 +388,23 @@
             <return><errorenumdesc/></return>
             <param dir="in" name="interrupt_ctl" type="seL4_Word"
                 description="The counters that you wish to enable interrupts for."/>
+            <error name="seL4_IllegalOperation">
+                <description>
+                    The <texttt text="_service"/> is a CPtr to a capability of the wrong type.
+                </description>
+            </error>
+        </method>
+
+        <method id="PMUNumCounters" name="NumCounters" manual_name="NumCounters" manual_label="pmucontrol_numcounters">
+            <brief>
+                Get the number of event counters available on this platform
+            </brief>
+            <description>
+                See <autoref label="sec:threads"/>
+            </description>
+            <return><errorenumdesc/></return>
+            <param dir="out" name="num_counters" type="seL4_Word"
+                description="This is the number of hardware performance counters read available, as read from the PMU."/>
             <error name="seL4_IllegalOperation">
                 <description>
                     The <texttt text="_service"/> is a CPtr to a capability of the wrong type.
