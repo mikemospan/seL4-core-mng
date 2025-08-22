@@ -234,7 +234,7 @@
         </method>
     </interface>
 
-        <interface name="seL4_ARM_PMUControl">
+    <interface name="seL4_ARM_PMUControl" manual_name="PMU" cap_description="Capability to allow threads to access the Performance Monitoring Unit.">
         <method id="PMUReadEventCounter" name="ReadEventCounter" manual_name="ReadEventCounter" manual_label="pmucontrol_readeventcounter">
             <brief>
                 Read the PMU counter associated with the specified input paramater.
