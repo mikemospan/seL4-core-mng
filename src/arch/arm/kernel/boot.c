@@ -398,6 +398,21 @@ static BOOT_CODE bool_t try_init_kernel(
     /* debug output via serial port is only available from here */
     printf("Bootstrapping kernel\n");
 
+    printf("Kernel arguments\n");
+    printf("ui_p_reg_start          : 0x%"SEL4_PRIx_word"\n", ui_p_reg_start);
+    printf("ui_p_reg_end            : 0x%"SEL4_PRIx_word"\n", ui_p_reg_end);
+    printf("pv_offset (signed)      : 0x%"SEL4_PRIx_word"\n", pv_offset);
+    printf("v_entry                 : 0x%"SEL4_PRIx_word"\n", v_entry);
+    printf("dtb_phys_addr           : 0x%"SEL4_PRIx_word"\n", dtb_phys_addr);
+    printf("dtb_size                : 0x%"SEL4_PRIx_word"\n", dtb_size);
+    printf("extra_device_addr_start : 0x%"SEL4_PRIx_word"\n", extra_device_addr_start);
+    printf("extra_device_size       : 0x%"SEL4_PRIx_word"\n", extra_device_size);
+
+    printf("\n");
+    printf("ui_reg: [%"SEL4_PRIx_word"..%"SEL4_PRIx_word")\n", ui_reg.start, ui_reg.end);
+    uint64_t *ui_reg_start = (uint64_t *)ui_reg.start;
+    printf("first word of ui_reg: 0x%llx\n", *ui_reg_start);
+
     /* initialise the platform */
     init_plat();
 
