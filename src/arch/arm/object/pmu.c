@@ -61,6 +61,17 @@ static exception_t decodePMUControl_WriteEventCounter(word_t length, cap_t cap, 
     return EXCEPTION_NONE;
 }
 
+static exception_t decodePMUControl_ReadCycleCounter(word_t length, cap_t cap, word_t *buffer, word_t badge)
+{
+    return EXCEPTION_NONE;
+}
+
+static exception_t decodePMUControl_WriteCycleCounter(word_t length, cap_t cap, word_t *buffer, word_t badge)
+{
+    return EXCEPTION_NONE;
+}
+
+
 /* FEAT_PMUv3_EXT */
 static exception_t decodePMUControl_CounterControl(word_t length, cap_t cap, word_t *buffer, word_t badge)
 {
@@ -119,17 +130,22 @@ static exception_t decodePMUControl_CounterControl(word_t length, cap_t cap, wor
 }
 
 /* FEAT_PMUv3_EXT */
-static exception_t decodePMUControl_InterruptValue(word_t length, cap_t cap, word_t *buffer, word_t badge)
+static exception_t decodePMUControl_ReadInterruptValue(word_t length, cap_t cap, word_t *buffer, word_t badge)
 {
     // Get the interrupt flag from the PMU
     uint32_t irqFlag = 0;
     MRS(PMOVSCLR_EL0, irqFlag);
 
-    // Clear the interrupt flag
-    uint32_t val = BIT(31);
-    MSR(PMOVSCLR_EL0, val);
-
     setRegister(NODE_STATE(ksCurThread), msgRegisters[0], irqFlag);
+
+    return EXCEPTION_NONE;
+}
+
+static exception_t decodePMUControl_WriteInterruptValue(word_t length, cap_t cap, word_t *buffer, word_t badge)
+{
+    seL4_Word interrupt_value = getSyscallArg(0, buffer);
+
+    MSR(PMOVSCLR_EL0, interrupt_value);
 
     return EXCEPTION_NONE;
 }
@@ -139,6 +155,18 @@ static exception_t decodePMUControl_InterruptControl(word_t length, cap_t cap, w
     seL4_Word interrupt_ctl = getSyscallArg(0, buffer);
 
     MSR(PMINTENSET_EL1, interrupt_ctl);
+
+    return EXCEPTION_NONE;
+}
+
+static exception_t decodePMUControl_NumCounters(word_t length, cap_t cap, word_t *buffer, word_t badge)
+{
+    // Find number of counters available on hardware
+    uint32_t ctrl_reg;
+    MRS(PMCR_EL0, ctrl_reg);
+    uint32_t num_counters = (ctrl_reg >> 11) & 0x1f;
+
+    setRegister(NODE_STATE(ksCurThread), msgRegisters[0], num_counters);
 
     return EXCEPTION_NONE;
 }
@@ -153,12 +181,20 @@ exception_t decodePMUControlInvocation(word_t label, unsigned int length, cptr_t
             return decodePMUControl_ReadEventCounter(length, cap, buffer, badge);
         case PMUWriteEventCounter:
             return decodePMUControl_WriteEventCounter(length, cap, buffer, badge);
+        case PMUReadCycleCounter:
+            return decodePMUControl_ReadCycleCounter(length, cap, buffer, badge);
+        case PMUWriteCycleCounter:
+            return decodePMUControl_WriteCycleCounter(length, cap, buffer, badge);
         case PMUCounterControl:
             return decodePMUControl_CounterControl(length, cap, buffer, badge);
-        case PMUInterruptValue:
-            return decodePMUControl_InterruptValue(length, cap, buffer, badge);
+        case PMUReadInterruptValue:
+            return decodePMUControl_ReadInterruptValue(length, cap, buffer, badge);
+        case PMUWriteInterruptValue:
+            return decodePMUControl_WriteInterruptValue(length, cap, buffer, badge);
         case PMUInterruptControl:
             return decodePMUControl_InterruptControl(length, cap, buffer, badge);
+        case PMUNumCounters:
+            return decodePMUControl_NumCounters(length, cap, buffer, badge);
         default:
             userError("PMUControl invocation: Illegal operation attempted.");
             current_syscall_error.type = seL4_IllegalOperation;
