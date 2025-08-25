@@ -74,6 +74,10 @@ typedef enum {
     seL4_TCBFlag_NoFlag = 0x0,
     seL4_TCBFlag_fpuDisabled = 0x1,
     seL4_TCBFlag_profile = 0x2,
+    /* @kwinter: Need consistent naming for this.
+    Also should we allow users to be able to set this flag
+    even if they don't have access to the PMU counters? */
+    seL4_TCBFlag_localPmuState = 0x3,
     SEL4_FORCE_LONG_ENUM(seL4_TCBFlag),
     seL4_TCBFlag_MASK = seL4_TCBFlag_NoFlag
 #ifdef CONFIG_HAVE_FPU
@@ -81,6 +85,9 @@ typedef enum {
 #endif
 #ifdef CONFIG_PROFILER_ENABLE
                         | seL4_TCBFlag_profile
+#endif
+#ifdef CONFIG_THREAD_LOCAL_PMU
+                        | seL4_TCBFlag_localPmuState
 #endif
 } seL4_TCBFlag;
 

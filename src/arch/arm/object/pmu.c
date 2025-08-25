@@ -1,6 +1,7 @@
 #include <config.h>
 
 #include <arch/object/pmu.h>
+#include <mode/machine/registerset.h>
 
 #define ISB asm volatile("isb")
 
@@ -63,11 +64,20 @@ static exception_t decodePMUControl_WriteEventCounter(word_t length, cap_t cap, 
 
 static exception_t decodePMUControl_ReadCycleCounter(word_t length, cap_t cap, word_t *buffer, word_t badge)
 {
+    seL4_Word cycle_counter;
+    MRS(PMU_CYCLE_CTR, cycle_counter);
+
+    setRegister(NODE_STATE(ksCurThread), msgRegisters[0], cycle_counter);
+
     return EXCEPTION_NONE;
 }
 
 static exception_t decodePMUControl_WriteCycleCounter(word_t length, cap_t cap, word_t *buffer, word_t badge)
 {
+    seL4_Word counter_value = getSyscallArg(0, buffer);
+
+    MSR(PMU_CYCLE_CTR, counter_value);
+
     return EXCEPTION_NONE;
 }
 

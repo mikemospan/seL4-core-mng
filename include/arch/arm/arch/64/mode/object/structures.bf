@@ -193,7 +193,7 @@ tagged_union cap capType {
 #ifndef CONFIG_ENABLE_SMP_SUPPORT
     tag sgi_signal_cap              27
 #endif
-    tag pmu_control_cap                     28
+    tag pmu_control_cap             29
 }
 
 ---- Arch-independent object types

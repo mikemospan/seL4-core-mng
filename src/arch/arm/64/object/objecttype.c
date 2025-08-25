@@ -98,6 +98,11 @@ deriveCap_ret_t Arch_deriveCap(cte_t *slot, cap_t cap)
         ret.status = EXCEPTION_NONE;
         return ret;
 #endif
+    case cap_pmu_control_cap:
+        ret.cap = cap;
+        ret.status = EXCEPTION_NONE;
+        return ret;
+
     default:
         /* This assert has no equivalent in haskell,
          * as the options are restricted by type */
