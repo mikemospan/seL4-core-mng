@@ -400,8 +400,7 @@ static BOOT_CODE bool_t try_init_kernel(
 
     printf("\n");
     printf("ui_reg: [%"SEL4_PRIx_word"..%"SEL4_PRIx_word")\n", ui_reg.start, ui_reg.end);
-    uint64_t *ui_reg_start = (uint64_t *)ui_reg.start;
-    printf("first word of ui_reg: 0x%llx\n", *ui_reg_start);
+    printf("first word of ui_reg: 0x%llx\n", *((uint64_t *)ui_reg.start));
 
     /* initialise the platform */
     init_plat();
