@@ -68,7 +68,8 @@ BOOT_CODE static void init_irqs(cap_t root_cnode_cap)
 }
 
 BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
-                                          v_region_t it_v_reg,
+                                          v_region_t it_payload_v_reg,
+                                          v_region_t it_ipc_bi_v_reg,
                                           mem_p_regs_t *mem_p_regs,
                                           word_t extra_bi_size_bits)
 {
@@ -78,7 +79,7 @@ BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
     ui_p_reg.start = KERNEL_ELF_PADDR_BASE;
     reserved[0] = paddr_to_pptr_reg(ui_p_reg);
     return init_freemem(mem_p_regs->count, mem_p_regs->list, MAX_RESERVED,
-                        reserved, it_v_reg, extra_bi_size_bits);
+                        reserved, it_payload_v_reg, it_ipc_bi_v_reg, extra_bi_size_bits);
 }
 
 /* This function initialises a node's kernel state. It does NOT initialise the CPU. */
@@ -115,13 +116,14 @@ BOOT_CODE bool_t init_sys_state(
 
     /* convert from physical addresses to userland vptrs */
     v_region_t ui_v_reg;
-    v_region_t it_v_reg;
+    /* The initial task will have two regions of memory:
+     * - Program image, which uses large page if CONFIG_INIT_TASK_LARGE_PAGE, and
+     * - IPC buffer and BootInfo frames, always small page, placed at USER_TOP.
+     */
+    v_region_t it_payload_v_reg;
+    v_region_t it_ipc_bi_v_reg;
     ui_v_reg.start = ui_info.p_reg.start - ui_info.pv_offset;
     ui_v_reg.end   = ui_info.p_reg.end   - ui_info.pv_offset;
-
-    ipcbuf_vptr = ui_v_reg.end;
-    bi_frame_vptr = ipcbuf_vptr + BIT(PAGE_BITS);
-    extra_bi_frame_vptr = bi_frame_vptr + BIT(seL4_BootInfoFrameBits);
 
     if (vbe->vbeMode != -1) {
         extra_bi_size += sizeof(seL4_X86_BootInfo_VBE);
@@ -140,9 +142,17 @@ BOOT_CODE bool_t init_sys_state(
     extra_bi_size += sizeof(seL4_BootInfoHeader) + 4;
     word_t extra_bi_size_bits = calculate_extra_bi_size_bits(extra_bi_size);
 
-    /* The region of the initial thread is the user image + ipcbuf and boot info */
-    it_v_reg.start = ui_v_reg.start;
-    it_v_reg.end = ROUND_UP(extra_bi_frame_vptr + (extra_bi_size_bits > 0 ? BIT(extra_bi_size_bits) : 0), PAGE_BITS);
+    // We can't place the a page at ROUND_DOWN(USER_TOP) on x86 because USER_TOP ends with 0x.....fff, so we go
+    // one page down.
+    extra_bi_frame_vptr = ROUND_DOWN(USER_TOP - BIT(PAGE_BITS), PAGE_BITS);
+    bi_frame_vptr = ROUND_DOWN(extra_bi_frame_vptr - BIT(seL4_BootInfoFrameBits) - (extra_bi_size_bits > 0 ? BIT(extra_bi_size_bits) : 0), PAGE_BITS);
+    ipcbuf_vptr = bi_frame_vptr - BIT(PAGE_BITS);
+
+    it_payload_v_reg.start = ui_v_reg.start;
+    it_payload_v_reg.end = ui_v_reg.end;
+
+    it_ipc_bi_v_reg.start = extra_bi_frame_vptr;
+    it_ipc_bi_v_reg.end = ipcbuf_vptr;
 #ifdef CONFIG_IOMMU
     /* calculate the number of io pts before initialising memory */
     if (!vtd_init_num_iopts(num_drhu)) {
@@ -150,7 +160,7 @@ BOOT_CODE bool_t init_sys_state(
     }
 #endif /* CONFIG_IOMMU */
 
-    if (!arch_init_freemem(ui_info.p_reg, it_v_reg, mem_p_regs, extra_bi_size_bits)) {
+    if (!arch_init_freemem(ui_info.p_reg, it_payload_v_reg, it_ipc_bi_v_reg, mem_p_regs, extra_bi_size_bits)) {
         printf("ERROR: free memory management initialization failed\n");
         return false;
     }
@@ -239,7 +249,7 @@ BOOT_CODE bool_t init_sys_state(
 
     /* Construct an initial address space with enough virtual addresses
      * to cover the user image + ipc buffer and bootinfo frames */
-    it_vspace_cap = create_it_address_space(root_cnode_cap, it_v_reg);
+    it_vspace_cap = create_it_address_space(root_cnode_cap, it_payload_v_reg, it_ipc_bi_v_reg);
     if (cap_get_capType(it_vspace_cap) == cap_null_cap) {
         return false;
     }
@@ -258,7 +268,8 @@ BOOT_CODE bool_t init_sys_state(
             it_vspace_cap,
             extra_bi_region,
             true,
-            pptr_to_paddr((void *)(extra_bi_region.start - extra_bi_frame_vptr))
+            pptr_to_paddr((void *)(extra_bi_region.start - extra_bi_frame_vptr)),
+            false
         );
     if (!extra_bi_ret.success) {
         return false;
@@ -272,14 +283,27 @@ BOOT_CODE bool_t init_sys_state(
     }
 
     /* create all userland image frames */
+#ifdef CONFIG_INIT_TASK_LARGE_PAGE
     create_frames_ret =
         create_frames_of_region(
             root_cnode_cap,
             it_vspace_cap,
             ui_reg,
             true,
-            ui_info.pv_offset
+            ui_info.pv_offset,
+            true
         );
+#else
+    create_frames_ret =
+        create_frames_of_region(
+            root_cnode_cap,
+            it_vspace_cap,
+            ui_reg,
+            true,
+            ui_info.pv_offset,
+            false
+        );
+#endif
     if (!create_frames_ret.success) {
         return false;
     }

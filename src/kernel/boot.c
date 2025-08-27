@@ -171,7 +171,7 @@ BOOT_CODE static word_t rootserver_max_size_bits(word_t extra_bi_size_bits)
     return MAX(max, extra_bi_size_bits);
 }
 
-BOOT_CODE static word_t calculate_rootserver_size(v_region_t it_v_reg, word_t extra_bi_size_bits)
+BOOT_CODE static word_t calculate_rootserver_size(v_region_t it_payload_v_reg, v_region_t it_ipc_bi_v_reg, word_t extra_bi_size_bits)
 {
     /* work out how much memory we need for root server objects */
     word_t size = BIT(CONFIG_ROOT_CNODE_SIZE_BITS + seL4_SlotBits);
@@ -184,8 +184,13 @@ BOOT_CODE static word_t calculate_rootserver_size(v_region_t it_v_reg, word_t ex
 #ifdef CONFIG_KERNEL_MCS
     size += BIT(seL4_MinSchedContextBits); // root sched context
 #endif
-    /* for all archs, seL4_PageTable Bits is the size of all non top-level paging structures */
-    return size + arch_get_n_paging(it_v_reg) * BIT(seL4_PageTableBits);
+
+    /* for all archs, seL4_PageTableBits is the size of all non top-level paging structures */
+#ifdef CONFIG_INIT_TASK_LARGE_PAGE
+    return size + (arch_get_n_paging(it_payload_v_reg, true) + arch_get_n_paging(it_ipc_bi_v_reg, false)) * BIT(seL4_PageTableBits);
+#else
+    return size + (arch_get_n_paging(it_payload_v_reg, false) + arch_get_n_paging(it_ipc_bi_v_reg, false)) * BIT(seL4_PageTableBits);
+#endif
 }
 
 BOOT_CODE static void maybe_alloc_extra_bi(word_t cmp_size_bits, word_t extra_bi_size_bits)
@@ -198,14 +203,14 @@ BOOT_CODE static void maybe_alloc_extra_bi(word_t cmp_size_bits, word_t extra_bi
 /* Create pptrs for all root server objects, starting at a give start address,
  * to cover the virtual memory region v_reg, and any extra boot info.
  */
-BOOT_CODE static void create_rootserver_objects(pptr_t start, v_region_t it_v_reg,
+BOOT_CODE static void create_rootserver_objects(pptr_t start, v_region_t it_payload_v_reg, v_region_t it_ipc_bi_v_reg,
                                                 word_t extra_bi_size_bits)
 {
     /* the largest object the PD, the root cnode, or the extra boot info */
     word_t cnode_size_bits = CONFIG_ROOT_CNODE_SIZE_BITS + seL4_SlotBits;
     word_t max = rootserver_max_size_bits(extra_bi_size_bits);
 
-    word_t size = calculate_rootserver_size(it_v_reg, extra_bi_size_bits);
+    word_t size = calculate_rootserver_size(it_payload_v_reg, it_ipc_bi_v_reg, extra_bi_size_bits);
     rootserver_mem.start = start;
     rootserver_mem.end = start + size;
 
@@ -241,7 +246,11 @@ BOOT_CODE static void create_rootserver_objects(pptr_t start, v_region_t it_v_re
 #endif
 
     /* paging structures are 4k on every arch except aarch32 (1k) */
-    word_t n = arch_get_n_paging(it_v_reg);
+#ifdef CONFIG_INIT_TASK_LARGE_PAGE
+    word_t n = arch_get_n_paging(it_payload_v_reg, true) + arch_get_n_paging(it_ipc_bi_v_reg, false);
+#else
+    word_t n = arch_get_n_paging(it_payload_v_reg, false) + arch_get_n_paging(it_ipc_bi_v_reg, false);
+#endif
     rootserver.paging.start = alloc_rootserver_obj(seL4_PageTableBits, n);
     rootserver.paging.end = rootserver.paging.start + n * BIT(seL4_PageTableBits);
 
@@ -395,7 +404,8 @@ BOOT_CODE create_frames_of_region_ret_t create_frames_of_region(
     cap_t    pd_cap,
     region_t reg,
     bool_t   do_map,
-    sword_t  pv_offset
+    sword_t  pv_offset,
+    bool_t   large_page
 )
 {
     pptr_t     f;
@@ -405,11 +415,18 @@ BOOT_CODE create_frames_of_region_ret_t create_frames_of_region(
 
     slot_pos_before = ndks_boot.slot_pos_cur;
 
-    for (f = reg.start; f < reg.end; f += BIT(PAGE_BITS)) {
+    word_t frame_bits;
+    if (large_page) {
+        frame_bits = LARGE_PAGE_BITS;
+    } else {
+        frame_bits = PAGE_BITS;
+    }
+
+    for (f = reg.start; f < reg.end; f += BIT(frame_bits)) {
         if (do_map) {
-            frame_cap = create_mapped_it_frame_cap(pd_cap, f, pptr_to_paddr((void *)(f - pv_offset)), IT_ASID, false, true);
+            frame_cap = create_mapped_it_frame_cap(pd_cap, f, pptr_to_paddr((void *)(f - pv_offset)), IT_ASID, large_page, true);
         } else {
-            frame_cap = create_unmapped_it_frame_cap(f, false);
+            frame_cap = create_unmapped_it_frame_cap(f, large_page);
         }
         if (!provide_cap(root_cnode_cap, frame_cap)) {
             return (create_frames_of_region_ret_t) {
@@ -841,10 +858,13 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap)
 
 BOOT_CODE void bi_finalise(void)
 {
-
     if (rootserver.paging.start != rootserver.paging.end) {
         printf("WARNING: internal book keeping error. Less pagetables allocated than predicted: "
                "%ld page tables allocated but not used.\n", (rootserver.paging.end - rootserver.paging.start) >> seL4_PageTableBits);
+        // @billn remove in the future, leaving this in to catch bugs.
+        // though in the current implementation, you will still see this warning if the IT payload
+        // comes within one 1GiB of USER_TOP.
+        assert(false);
     }
 
     ndks_boot.bi_frame->empty = (seL4_SlotRegion) {
@@ -939,7 +959,8 @@ BOOT_BSS static region_t avail_reg[MAX_NUM_FREEMEM_REG];
  */
 BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
                               word_t n_reserved, const region_t *reserved,
-                              v_region_t it_v_reg, word_t extra_bi_size_bits)
+                              v_region_t it_payload_v_reg, v_region_t it_ipc_bi_v_reg,
+                              word_t extra_bi_size_bits)
 {
 
     if (!check_available_memory(n_available, available)) {
@@ -1029,7 +1050,7 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
 
     /* try to grab the last available p region to create the root server objects
      * from. If possible, retain any left over memory as an extra p region */
-    word_t size = calculate_rootserver_size(it_v_reg, extra_bi_size_bits);
+    word_t size = calculate_rootserver_size(it_payload_v_reg, it_ipc_bi_v_reg, extra_bi_size_bits);
     word_t max = rootserver_max_size_bits(extra_bi_size_bits);
     for (; i >= 0; i--) {
         /* Invariant: both i and (i + 1) are valid indices in ndks_boot.freemem. */
@@ -1053,7 +1074,7 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
          * then we've found a region that fits the root server objects. */
         if (unaligned_start <= ndks_boot.freemem[i].end
             && start >= ndks_boot.freemem[i].start) {
-            create_rootserver_objects(start, it_v_reg, extra_bi_size_bits);
+            create_rootserver_objects(start, it_payload_v_reg, it_ipc_bi_v_reg, extra_bi_size_bits);
             /* There may be leftovers before and after the memory we used. */
             /* Shuffle the after leftover up to the empty slot (i + 1). */
             ndks_boot.freemem[empty_index] = (region_t) {

@@ -460,7 +460,11 @@ static BOOT_CODE bool_t try_boot_sys(void)
     }
 
     /* calculate final location of userland images */
+#ifdef CONFIG_INIT_TASK_LARGE_PAGE
+    ui_p_regs.start = ROUND_UP(boot_state.ki_p_reg.end, LARGE_PAGE_BITS);
+#else
     ui_p_regs.start = boot_state.ki_p_reg.end;
+#endif
     ui_p_regs.end = ui_p_regs.start + load_paddr - mods_end_paddr;
 
     printf(

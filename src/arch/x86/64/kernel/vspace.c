@@ -522,41 +522,6 @@ BOOT_CODE void init_dtrs(void)
     x64_install_tss(SEL_TSS);
 }
 
-BOOT_CODE void map_it_frame_cap(cap_t pd_cap, cap_t frame_cap)
-{
-    pml4e_t *pml4 = PML4_PTR(pptr_of_cap(pd_cap));
-    pdpte_t *pdpt;
-    pde_t *pd;
-    pte_t *pt;
-    vptr_t vptr = cap_frame_cap_get_capFMappedAddress(frame_cap);
-    void *pptr = (void *)cap_frame_cap_get_capFBasePtr(frame_cap);
-
-    assert(cap_frame_cap_get_capFMapType(frame_cap) == X86_MappingVSpace);
-    assert(cap_frame_cap_get_capFMappedASID(frame_cap) != asidInvalid);
-    pml4 += GET_PML4_INDEX(vptr);
-    assert(pml4e_ptr_get_present(pml4));
-    pdpt = paddr_to_pptr(pml4e_ptr_get_pdpt_base_address(pml4));
-    pdpt += GET_PDPT_INDEX(vptr);
-    assert(pdpte_pdpte_pd_ptr_get_present(pdpt));
-    pd = paddr_to_pptr(pdpte_pdpte_pd_ptr_get_pd_base_address(pdpt));
-    pd += GET_PD_INDEX(vptr);
-    assert(pde_pde_pt_ptr_get_present(pd));
-    pt = paddr_to_pptr(pde_pde_pt_ptr_get_pt_base_address(pd));
-    *(pt + GET_PT_INDEX(vptr)) = pte_new(
-                                     0,                      /* xd                   */
-                                     pptr_to_paddr(pptr),    /* page_base_address    */
-                                     0,                      /* global               */
-                                     0,                      /* pat                  */
-                                     0,                      /* dirty                */
-                                     0,                      /* accessed             */
-                                     0,                      /* cache_disabled       */
-                                     0,                      /* write_through        */
-                                     1,                      /* super_user           */
-                                     1,                      /* read_write           */
-                                     1                       /* present              */
-                                 );
-}
-
 static BOOT_CODE void map_it_pdpt_cap(cap_t vspace_cap, cap_t pdpt_cap)
 {
     pml4e_t *pml4 = PML4_PTR(pptr_of_cap(vspace_cap));
@@ -626,16 +591,6 @@ BOOT_CODE void map_it_pt_cap(cap_t vspace_cap, cap_t pt_cap)
                                  );
 }
 
-BOOT_CODE void *map_temp_boot_page(void *entry, uint32_t large_pages)
-{
-    /* this function is for legacy 32-bit systems where the ACPI tables might
-     * collide with the kernel window. Here we just assert that the table is
-     * in fact in the lower 4GiB region (which is already 1-to-1 mapped) and
-     * continue */
-    assert((word_t)entry < BIT(32));
-    return entry;
-}
-
 static BOOT_CODE cap_t create_it_pdpt_cap(cap_t vspace_cap, pptr_t pptr, vptr_t vptr, asid_t asid)
 {
     cap_t cap;
@@ -675,10 +630,88 @@ static BOOT_CODE cap_t create_it_pt_cap(cap_t vspace_cap, pptr_t pptr, vptr_t vp
     return cap;
 }
 
-
-BOOT_CODE word_t arch_get_n_paging(v_region_t it_v_reg)
+BOOT_CODE void map_it_frame_cap(cap_t pd_cap, cap_t frame_cap)
 {
-    word_t n = get_n_paging(it_v_reg, PD_INDEX_OFFSET);
+    vm_page_size_t frameSize = cap_frame_cap_get_capFSize(frame_cap);
+    pml4e_t *pml4 = PML4_PTR(pptr_of_cap(pd_cap));
+    pdpte_t *pdpt;
+    pde_t *pd;
+    pte_t *pt;
+    vptr_t vptr = cap_frame_cap_get_capFMappedAddress(frame_cap);
+    void *pptr = (void *)cap_frame_cap_get_capFBasePtr(frame_cap);
+
+#ifndef CONFIG_INIT_TASK_LARGE_PAGE
+    assert(frameSize == X86_SmallPage);
+#endif
+
+    printf("map_it_frame_cap x86_64 with vptr 0x%lx, pptr %p, frame size %lu\n", vptr, pptr, frameSize);
+
+    assert(cap_frame_cap_get_capFMapType(frame_cap) == X86_MappingVSpace);
+    assert(cap_frame_cap_get_capFMappedASID(frame_cap) != asidInvalid);
+    pml4 += GET_PML4_INDEX(vptr);
+    assert(pml4e_ptr_get_present(pml4));
+    pdpt = paddr_to_pptr(pml4e_ptr_get_pdpt_base_address(pml4));
+    pdpt += GET_PDPT_INDEX(vptr);
+    assert(pdpte_pdpte_pd_ptr_get_present(pdpt));
+    pd = paddr_to_pptr(pdpte_pdpte_pd_ptr_get_pd_base_address(pdpt));
+    pd += GET_PD_INDEX(vptr);
+
+    if (frameSize == X86_SmallPage)
+    {
+        printf("paddr small map 0x%lx\n", pptr_to_paddr(pptr));
+        assert(pde_pde_pt_ptr_get_present(pd));
+        pt = paddr_to_pptr(pde_pde_pt_ptr_get_pt_base_address(pd));
+        *(pt + GET_PT_INDEX(vptr)) = pte_new(
+            0,                   /* xd                   */
+            pptr_to_paddr(pptr), /* page_base_address    */
+            0,                   /* global               */
+            0,                   /* pat                  */
+            0,                   /* dirty                */
+            0,                   /* accessed             */
+            0,                   /* cache_disabled       */
+            0,                   /* write_through        */
+            1,                   /* super_user           */
+            1,                   /* read_write           */
+            1                    /* present              */
+        );
+    }
+    else
+    {
+        printf("paddr large map 0x%lx\n", pptr_to_paddr(pptr));
+        assert(!pde_pde_pt_ptr_get_present(pd));
+        *pd = pde_pde_large_new(
+            0,                   /* xd */
+            pptr_to_paddr(pptr), /* page_base_address    */
+            0,                   /* pat                  */
+            0,                   /* global               */
+            0,                   /* dirty                */
+            0,                   /* accessed             */
+            0,                   /* cache_disabled       */
+            0,                   /* write_through        */
+            1,                   /* super_user           */
+            1,                   /* read_write           */
+            1                    /* present              */
+        );
+    }
+}
+
+BOOT_CODE void *map_temp_boot_page(void *entry, uint32_t large_pages)
+{
+    /* this function is for legacy 32-bit systems where the ACPI tables might
+     * collide with the kernel window. Here we just assert that the table is
+     * in fact in the lower 4GiB region (which is already 1-to-1 mapped) and
+     * continue */
+    assert((word_t)entry < BIT(32));
+    return entry;
+}
+
+BOOT_CODE word_t arch_get_n_paging(v_region_t it_v_reg, bool_t large_page)
+{
+    word_t n = 0;
+    if (!large_page) {
+        n += get_n_paging(it_v_reg, PD_INDEX_OFFSET);
+    }
+
     n += get_n_paging(it_v_reg, PDPT_INDEX_OFFSET);
     n += get_n_paging(it_v_reg, PML4_INDEX_OFFSET);
 #ifdef CONFIG_IOMMU
@@ -687,7 +720,7 @@ BOOT_CODE word_t arch_get_n_paging(v_region_t it_v_reg)
     return n;
 }
 
-BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_reg)
+BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_payload_v_reg, v_region_t it_ipc_bi_v_reg)
 {
     cap_t      vspace_cap;
     vptr_t     vptr;
@@ -706,8 +739,19 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_re
     write_slot(SLOT_PTR(pptr_of_cap(root_cnode_cap), seL4_CapInitThreadVSpace), vspace_cap);
 
     /* Create any PDPTs needed for the user land image */
-    for (vptr = ROUND_DOWN(it_v_reg.start, PML4_INDEX_OFFSET);
-         vptr < it_v_reg.end;
+    for (vptr = ROUND_DOWN(it_payload_v_reg.start, PML4_INDEX_OFFSET);
+         vptr < it_payload_v_reg.end;
+         vptr += BIT(PML4_INDEX_OFFSET)) {
+        if (!provide_cap(root_cnode_cap,
+                         create_it_pdpt_cap(vspace_cap, it_alloc_paging(), vptr, IT_ASID))
+           ) {
+            return cap_null_cap_new();
+        }
+    }
+    // @billn revisit, risk of double map if the IT payload is close to USER_TOP
+    /* Create any PDPTs needed for the IPC Buffer and BootInfo frames */
+    for (vptr = ROUND_DOWN(it_ipc_bi_v_reg.start, PML4_INDEX_OFFSET);
+         vptr < it_ipc_bi_v_reg.end;
          vptr += BIT(PML4_INDEX_OFFSET)) {
         if (!provide_cap(root_cnode_cap,
                          create_it_pdpt_cap(vspace_cap, it_alloc_paging(), vptr, IT_ASID))
@@ -717,8 +761,19 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_re
     }
 
     /* Create any PDs needed for the user land image */
-    for (vptr = ROUND_DOWN(it_v_reg.start, PDPT_INDEX_OFFSET);
-         vptr < it_v_reg.end;
+    for (vptr = ROUND_DOWN(it_payload_v_reg.start, PDPT_INDEX_OFFSET);
+         vptr < it_payload_v_reg.end;
+         vptr += BIT(PDPT_INDEX_OFFSET)) {
+        if (!provide_cap(root_cnode_cap,
+                         create_it_pd_cap(vspace_cap, it_alloc_paging(), vptr, IT_ASID))
+           ) {
+            return cap_null_cap_new();
+        }
+    }
+    // @billn revisit, risk of double map if the IT payload is close to USER_TOP
+    /* Create any PDs needed for the IPC Buffer and BootInfo frames */
+    for (vptr = ROUND_DOWN(it_ipc_bi_v_reg.start, PDPT_INDEX_OFFSET);
+         vptr < it_ipc_bi_v_reg.end;
          vptr += BIT(PDPT_INDEX_OFFSET)) {
         if (!provide_cap(root_cnode_cap,
                          create_it_pd_cap(vspace_cap, it_alloc_paging(), vptr, IT_ASID))
@@ -727,9 +782,22 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_re
         }
     }
 
+#ifndef CONFIG_INIT_TASK_LARGE_PAGE
     /* Create any PTs needed for the user land image */
-    for (vptr = ROUND_DOWN(it_v_reg.start, PD_INDEX_OFFSET);
-         vptr < it_v_reg.end;
+    for (vptr = ROUND_DOWN(it_payload_v_reg.start, PD_INDEX_OFFSET);
+         vptr < it_payload_v_reg.end;
+         vptr += BIT(PD_INDEX_OFFSET)) {
+        if (!provide_cap(root_cnode_cap,
+                         create_it_pt_cap(vspace_cap, it_alloc_paging(), vptr, IT_ASID))
+           ) {
+            return cap_null_cap_new();
+        }
+    }
+#endif
+    // @billn revisit, risk of double map if the IT payload is close to USER_TOP
+    /* Create any PTs needed for the IPC Buffer and BootInfo frames */
+    for (vptr = ROUND_DOWN(it_ipc_bi_v_reg.start, PD_INDEX_OFFSET);
+         vptr < it_ipc_bi_v_reg.end;
          vptr += BIT(PD_INDEX_OFFSET)) {
         if (!provide_cap(root_cnode_cap,
                          create_it_pt_cap(vspace_cap, it_alloc_paging(), vptr, IT_ASID))

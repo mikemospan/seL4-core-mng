@@ -230,6 +230,15 @@ else()
     config_set(KernelEnableSMPSupport ENABLE_SMP_SUPPORT OFF)
 endif()
 
+config_option(
+    KernelMapInitialTaskWithLargePage
+    INIT_TASK_LARGE_PAGE
+    "Map the initial task's image using large page. The IPC buffer and BootInfo frames are still\
+    small page."
+    DEFAULT OFF
+    DEPENDS "NOT KernelVerificationBuild"
+)
+
 config_string(
     KernelStackBits
     KERNEL_STACK_BITS

@@ -43,7 +43,8 @@ p_region_t get_p_reg_kernel_img_boot(void);
 p_region_t get_p_reg_kernel_img(void);
 bool_t init_freemem(word_t n_available, const p_region_t *available,
                     word_t n_reserved, const region_t *reserved,
-                    v_region_t it_v_reg, word_t extra_bi_size_bits);
+                    v_region_t it_payload_v_reg, v_region_t it_ipc_bi_v_reg,
+                    word_t extra_bi_size_bits);
 bool_t reserve_region(p_region_t reg);
 void write_slot(slot_ptr_t slot_ptr, cap_t cap);
 cap_t create_root_cnode(void);
@@ -76,7 +77,8 @@ create_frames_of_region(
     cap_t    pd_cap,
     region_t reg,
     bool_t   do_map,
-    sword_t  pv_offset
+    sword_t  pv_offset,
+    bool_t     large_page
 );
 
 cap_t
@@ -136,7 +138,7 @@ static inline BOOT_CODE pptr_t it_alloc_paging(void)
 }
 
 /* return the amount of paging structures required to cover v_reg */
-word_t arch_get_n_paging(v_region_t it_veg);
+word_t arch_get_n_paging(v_region_t it_reg, bool_t large_page);
 
 #if defined(CONFIG_DEBUG_BUILD) && defined(ENABLE_SMP_SUPPORT) && defined(CONFIG_KERNEL_MCS) && !defined(CONFIG_PLAT_QEMU_ARM_VIRT)
 /* Test whether clocks are synchronised across nodes */
