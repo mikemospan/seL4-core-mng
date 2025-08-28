@@ -6,7 +6,7 @@
 #define ISB asm volatile("isb")
 
 #ifdef CONFIG_THREAD_LOCAL_PMU
-UP_STATE_DEFINE(user_pmu_state_t, cpu_pmu_state);
+UP_STATE_DEFINE(pmu_state_t, cpu_pmu_state);
 #endif /* CONFIG_THREAD_LOCAL_PMU */
 
 // @kwinter: The following functions are tagged with which ARM extension impelments the features.

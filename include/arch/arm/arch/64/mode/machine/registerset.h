@@ -261,7 +261,7 @@ typedef struct user_fpu_state {
 #endif /* CONFIG_HAVE_FPU */
 
 #ifdef CONFIG_THREAD_LOCAL_PMU
-typedef struct user_pmu_state {
+typedef struct pmu_state {
     /* This state is the only things that userspace can read/access based
     on the kernel PMU access control capability's invocations. */
     uint64_t cycle_counter;
@@ -276,7 +276,7 @@ typedef struct user_pmu_state {
     uint32_t pmovsclr;
     /* PMU Interrupt enable set register */
     uint32_t pmitenset;
-} user_pmu_state_t;
+} pmu_state_t;
 #endif /* CONFIG_THREAD_LOCAL_PMU */
 
 /*
@@ -291,7 +291,7 @@ struct user_context {
     user_fpu_state_t fpuState;
 #endif /* CONFIG_HAVE_FPU */
 #ifdef CONFIG_THREAD_LOCAL_PMU
-    user_pmu_state_t pmuState;
+    pmu_state_t pmuState;
 #endif /* CONFIG_THREAD_LOCAL_PMU */
 #ifdef ARM_BASE_CP14_SAVE_AND_RESTORE
     user_breakpoint_state_t breakpointState;

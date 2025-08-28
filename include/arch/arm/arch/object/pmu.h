@@ -207,9 +207,9 @@ exception_t decodePMUControlInvocation(word_t label, unsigned int length, cptr_t
 
 #ifdef CONFIG_THREAD_LOCAL_PMU
 /* Store the PMU state into the user context */
-static inline void savePmuState(user_pmu_state_t *pmu_state)
+static inline void savePmuState(pmu_state_t *pmu_state)
 {
-    // user_pmu_state_t *pmuState = &thread->tcbArch.tcbContext.pmuState;
+    // pmu_state_t *pmuState = &thread->tcbArch.tcbContext.pmuState;
     /* @kwinter: Should we disable the PMU here, or further up in the context
     switching callchain?? Should we really disable at all? To disable or not to disable,
     that is the question. */
@@ -232,7 +232,7 @@ static inline void savePmuState(user_pmu_state_t *pmu_state)
 }
 
 /* Load the PMU state from the user context into the PMU */
-static inline void loadPmuState(user_pmu_state_t *pmu_state)
+static inline void loadPmuState(pmu_state_t *pmu_state)
 {
     /* @kwinter: Should we allow a write to enable the cycle counter here? Or disable
     it until we finish the context switching process. Would then have to keep

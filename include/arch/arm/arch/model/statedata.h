@@ -27,7 +27,7 @@ NODE_STATE_DECLARE(bool_t, armHSFPUEnabled);
 NODE_STATE_DECLARE(uint64_t, ccnt_num_overflows);
 #endif /* defined(CONFIG_BENCHMARK_TRACK_UTILISATION) && defined(KERNEL_PMU_IRQ) */
 #ifdef CONFIG_THREAD_LOCAL_PMU
-NODE_STATE_DECLARE(user_pmu_state_t, cpu_pmu_state);
+NODE_STATE_DECLARE(pmu_state_t, cpu_pmu_state);
 #endif /* CONFIG_THREAD_LOCAL_PMU */
 NODE_STATE_END(archNodeState);
 
