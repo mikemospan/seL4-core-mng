@@ -255,7 +255,7 @@ static inline void loadPmuState(user_pmu_state_t *pmu_state)
         MSR(PMXEVCNTR_EL0, pmu_state->event_counters[i]);
         MSR(PMXEVTYPER_EL0, pmu_state->event_counters[i]);
     }
- }
+}
 
 static inline void restorePmuState(tcb_t *thread)
 {

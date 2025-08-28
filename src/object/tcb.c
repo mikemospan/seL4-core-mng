@@ -27,6 +27,10 @@
 #include <stdint.h>
 #include <arch/smp/ipi_inline.h>
 
+#ifdef CONFIG_THREAD_LOCAL_PMU
+#include <arch/object/pmu.h>
+#endif /* CONFIG_THREAD_LOCAL_PMU */
+
 #define NULL_PRIO 0
 
 static exception_t checkPrio(prio_t prio, tcb_t *auth)
@@ -799,6 +803,15 @@ static void invokeSetFlags(tcb_t *thread, word_t clear, word_t set, bool_t call)
 
     flags &= ~clear;
     flags |= set & seL4_TCBFlag_MASK;
+
+#ifdef CONFIG_THREAD_LOCAL_PMU
+    /* Save the current PMU state to the core global state, and load the threads state.*/
+    if (flags & seL4_TCBFlag_localPmuState && !(thread->tcbFlags & seL4_TCBFlag_localPmuState)) {
+        savePmuState(&ARCH_NODE_STATE(cpu_pmu_state));
+        loadPmuState(&thread->tcbArch.tcbContext.pmuState);
+    }
+#endif /* CONFIG_THREAD_LOCAL_PMU */
+
     thread->tcbFlags = flags;
 
 #ifdef CONFIG_HAVE_FPU
