@@ -26,7 +26,7 @@
  * +1 loader specified extra memory
  * +1 for each the MODE_RESERVED region, there might be none
  */
-#define NUM_RESERVED_REGIONS (4 + MODE_RESERVED)
+#define NUM_RESERVED_REGIONS (4 + MODE_RESERVED + 5)
 
 
 /* The maximum number of reserved regions is:
