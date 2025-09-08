@@ -153,6 +153,13 @@ block pmu_control_cap {
     padding             59
 }
 
+block vpmu_cap {
+    padding             64
+    field capType       5
+    field capPMUPtr     48
+    padding             11
+}
+
 -- NB: odd numbers are arch caps (see isArchCap())
 tagged_union cap capType {
     -- 5-bit tag caps
@@ -194,6 +201,7 @@ tagged_union cap capType {
     tag sgi_signal_cap              27
 #endif
     tag pmu_control_cap             29
+    tag vpmu_cap                    31
 }
 
 ---- Arch-independent object types

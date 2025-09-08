@@ -499,7 +499,10 @@ cap_t Arch_createObject(object_t t, void *regionBase, word_t userSize, bool_t de
         vcpu_init(VCPU_PTR(regionBase));
         return cap_vcpu_cap_new(VCPU_REF(regionBase));
 #endif
-
+#ifdef CONFIG_THREAD_LOCAL_PMU
+    case seL4_ARM_VPMU:
+        return cap_vpmu_cap_new((word_t)regionBase);
+#endif
     default:
         fail("Arch_createObject got an API type or invalid object type");
     }

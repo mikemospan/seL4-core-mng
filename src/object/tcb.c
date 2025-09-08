@@ -807,8 +807,8 @@ static void invokeSetFlags(tcb_t *thread, word_t clear, word_t set, bool_t call)
 #ifdef CONFIG_THREAD_LOCAL_PMU
     /* Save the current PMU state to the core global state, and load the threads state.*/
     if (flags & seL4_TCBFlag_localPmuState && !(thread->tcbFlags & seL4_TCBFlag_localPmuState)) {
-        savePmuState(&ARCH_NODE_STATE(cpu_pmu_state));
-        loadPmuState(&thread->tcbArch.tcbContext.pmuState);
+        savePmuState(NULL);
+        loadPmuState(NULL);
     }
 #endif /* CONFIG_THREAD_LOCAL_PMU */
 

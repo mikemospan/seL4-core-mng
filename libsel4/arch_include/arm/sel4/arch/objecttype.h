@@ -19,6 +19,9 @@ typedef enum _object {
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
     seL4_ARM_VCPUObject,
 #endif
+#ifdef CONFIG_THREAD_LOCAL_PMU
+    seL4_ARM_VPMU,
+#endif
 #ifdef CONFIG_TK1_SMMU
     seL4_ARM_IOPageTableObject,
 #endif

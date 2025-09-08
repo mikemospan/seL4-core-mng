@@ -291,7 +291,7 @@ struct user_context {
     user_fpu_state_t fpuState;
 #endif /* CONFIG_HAVE_FPU */
 #ifdef CONFIG_THREAD_LOCAL_PMU
-    pmu_state_t pmuState;
+    // pmu_state_t pmuState;
 #endif /* CONFIG_THREAD_LOCAL_PMU */
 #ifdef ARM_BASE_CP14_SAVE_AND_RESTORE
     user_breakpoint_state_t breakpointState;
