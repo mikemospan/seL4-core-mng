@@ -779,6 +779,9 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
         }
         sched_context_t *sc = SC_PTR(cap_sched_context_cap_get_capSCPtr(cap));
         return decodeSchedContextInvocation(invLabel, sc, call);
+#ifdef CONFIG_THREAD_LOCAL_PMU
+        return decode
+#endif
 #endif
     default:
         fail("Invalid cap type");

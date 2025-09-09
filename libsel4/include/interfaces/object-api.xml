@@ -848,6 +848,30 @@
                 </description>
             </error>
         </method>
+
+        <method id="TCBBindVPMU" name="BindVPMU" manual_name="BindVPMU" manual_label="tcb_bindvpmu">
+            <condition><config var="CONFIG_THREAD_LOCAL_PMU"/></condition>
+            <brief>
+                Bind a VPMU object to a <obj name="TCB"/>.
+            </brief>
+            <description>
+                Instead of using the global state of the hardware counters, when context switching to
+                a thread with a bound VPMU, the hardware state will be swapped to that of the VPMU object.
+                If no VPMU is bound to a thread, then no context switching of PMU registers occurs.
+            </description>
+            <param dir="in" name="vpmu" type="seL4_Word" description="Virtual PMU object to bind"/>
+        </method>
+
+
+        <method id="TCBUnbindVPMU" name="UnbindVPMU" manual_name="UnbindVPMU" manual_label="tcb_unbindvpmu">
+            <condition><config var="CONFIG_THREAD_LOCAL_PMU"/></condition>
+            <brief>
+                Unbind VPMU from <obj name="TCB"/>.
+            </brief>
+            <description>
+                If a VPMU object is currently bound to the TCB, it will be unbound.
+            </description>
+        </method>
     </interface>
 
     <interface name="seL4_CNode" manual_name="CNode">

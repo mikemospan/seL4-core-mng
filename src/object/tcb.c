@@ -29,6 +29,7 @@
 
 #ifdef CONFIG_THREAD_LOCAL_PMU
 #include <arch/object/pmu.h>
+#include <mode/machine/registerset.h>
 #endif /* CONFIG_THREAD_LOCAL_PMU */
 
 #define NULL_PRIO 0
@@ -943,6 +944,12 @@ exception_t decodeTCBInvocation(word_t invLabel, word_t length, cap_t cap,
 
     case TCBSetFlags:
         return decodeSetFlags(cap, length, call, buffer);
+#ifdef CONFIG_THREAD_LOCAL_PMU
+    case TCBBindVPMU:
+        return decodeBindVPMU(cap);
+    case TCBUnbindVPMU:
+        return decodeUnbindVPMU(cap);
+#endif
 
     default:
         /* Haskell: "throw IllegalOperation" */
@@ -1744,6 +1751,64 @@ exception_t decodeUnbindNotification(cap_t cap)
     setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
     return invokeTCB_NotificationControl(tcb, NULL);
 }
+
+#ifdef CONFIG_THREAD_LOCAL_PMU
+exception_t decodeBindVPMU(cap_t cap)
+{
+    user_pmu_state_t *pmuPtr;
+    tcb_t *tcb;
+    cap_t vpmu;
+
+    if (current_extra_caps.excaprefs[0] == NULL) {
+        userError("TCB BindVPMU: Truncated message.");
+        current_syscall_error.type = seL4_TruncatedMessage;
+        return EXCEPTION_SYSCALL_ERROR;
+    }
+
+    tcb = TCB_PTR(cap_thread_cap_get_capTCBPtr(cap));
+
+    if (tcb->tcbArch.pmuState != NULL) {
+        userError("TCB BindVPMU: TCB already has a bound VPMU.");
+        current_syscall_error.type = seL4_IllegalOperation;
+        return EXCEPTION_SYSCALL_ERROR;
+    }
+
+    vpmu = current_extra_caps.excaprefs[0]->cap;
+
+    if (cap_get_capType(vpmu) == cap_vpmu_cap) {
+        pmuPtr = VPMU_PTR(cap_vpmu_cap_get_capPMUPtr(vpmu));
+    } else {
+        userError("TCB BindVPMU: Notification is invalid.");
+        current_syscall_error.type = seL4_IllegalOperation;
+        return EXCEPTION_SYSCALL_ERROR;
+    }
+
+    /* Set the pointer in the arch TCB to the pmuPtr from the VPMU cap
+    we have been passed in. */
+    tcb->tcbArch.pmuState = pmuPtr;
+
+    setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
+    return EXCEPTION_NONE;
+}
+
+exception_t decodeUnbindVPMU(cap_t cap)
+{
+    tcb_t *tcb;
+
+    tcb = TCB_PTR(cap_thread_cap_get_capTCBPtr(cap));
+
+    if (tcb->tcbArch.pmuState == NULL) {
+        userError("TCB UnbindVPMU: TCB does not have any bound VPMU.");
+        current_syscall_error.type = seL4_IllegalOperation;
+        return EXCEPTION_SYSCALL_ERROR;
+    }
+
+    tcb->tcbArch.pmuState = NULL;
+
+    setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
+    return EXCEPTION_NONE;
+}
+#endif
 
 /* The following functions sit in the preemption monad and implement the
  * preemptible, non-faulting bottom end of a TCB invocation. */

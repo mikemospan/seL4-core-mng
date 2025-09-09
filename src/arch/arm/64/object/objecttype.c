@@ -103,6 +103,13 @@ deriveCap_ret_t Arch_deriveCap(cte_t *slot, cap_t cap)
         ret.status = EXCEPTION_NONE;
         return ret;
 
+#ifdef CONFIG_THREAD_LOCAL_PMU
+    case cap_vpmu_cap:
+        ret.cap = cap;
+        ret.status = EXCEPTION_NONE;
+        return ret;
+#endif
+
     default:
         /* This assert has no equivalent in haskell,
          * as the options are restricted by type */
@@ -319,6 +326,10 @@ bool_t CONST Arch_sameRegionAs(cap_t cap_a, cap_t cap_b)
         }
         break;
 #endif
+#ifdef CONFIG_THREAD_LOCAL_PMU
+    case cap_vpmu_cap:
+        if (cap_get_capType(cap_b) == )
+#endif
     }
     return false;
 }
@@ -370,6 +381,10 @@ word_t Arch_getObjectSize(word_t t)
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
     case seL4_ARM_VCPUObject:
         return VCPU_SIZE_BITS;
+#endif
+#ifdef CONFIG_THREAD_LOCAL_PMU
+    case seL4_ARM_VPMU:
+        return seL4_VPMUBits;
 #endif
     default:
         fail("Invalid object type");

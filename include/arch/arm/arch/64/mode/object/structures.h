@@ -21,6 +21,9 @@ typedef struct arch_tcb {
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
     struct vcpu *tcbVCPU;
 #endif
+#ifdef CONFIG_THREAD_LOCAL_PMU
+    pmu_state_t *pmuState;
+#endif /* CONFIG_THREAD_LOCAL_PMU */
 } arch_tcb_t;
 
 enum vm_rights {
@@ -57,6 +60,9 @@ typedef pte_t vspace_root_t;
 /* Generate a vcpu_t pointer from a vcpu block reference */
 #define VCPU_PTR(r)       ((struct vcpu *)(r))
 #define VCPU_REF(p)       ((word_t)(p))
+
+/* Generate a pmu_state_t pointer form a vpmu block reference */
+#define VPMU_PTR(r)        ((pmu_state_t *)(r))
 
 struct asid_pool {
     asid_map_t array[BIT(asidLowBits)];
