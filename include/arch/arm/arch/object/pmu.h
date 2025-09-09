@@ -261,17 +261,17 @@ static inline void restorePmuState(tcb_t *thread)
 {
     if ((NODE_STATE(ksCurThread)->tcbFlags & seL4_TCBFlag_localPmuState) &&
         (thread->tcbFlags & seL4_TCBFlag_localPmuState)) {
-        savePmuState(NULL);
-        loadPmuState(NULL);
+        savePmuState(NODE_STATE(ksCurThread)->tcbArch.pmuState);
+        loadPmuState(thread->tcbArch.pmuState);
     } else if ((NODE_STATE(ksCurThread)->tcbFlags & seL4_TCBFlag_localPmuState)) {
         // Transitioning from TCB doing per process monitoring to use global cpu
         // counters
-        savePmuState(NULL);
-        loadPmuState(NULL);
+        savePmuState(NODE_STATE(ksCurThread)->tcbArch.pmuState);
+        loadPmuState(&ARCH_NODE_STATE(cpu_pmu_state));
     } else if (thread->tcbFlags & seL4_TCBFlag_localPmuState) {
         // Transitioning from a TCB not doing per process monitoring to one that is
-        savePmuState(NULL);
-        loadPmuState(NULL);
+        savePmuState(&ARCH_NODE_STATE(cpu_pmu_state));
+        loadPmuState(NODE_STATE(ksCurThread)->tcbArch.pmuState);
     }
     /* In the case that we are transitioning between two TCB's not using per process
     PMU counters, then we don't need to alter any state, just continue to let the global

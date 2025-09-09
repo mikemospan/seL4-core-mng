@@ -805,14 +805,6 @@ static void invokeSetFlags(tcb_t *thread, word_t clear, word_t set, bool_t call)
     flags &= ~clear;
     flags |= set & seL4_TCBFlag_MASK;
 
-#ifdef CONFIG_THREAD_LOCAL_PMU
-    /* Save the current PMU state to the core global state, and load the threads state.*/
-    if (flags & seL4_TCBFlag_localPmuState && !(thread->tcbFlags & seL4_TCBFlag_localPmuState)) {
-        savePmuState(NULL);
-        loadPmuState(NULL);
-    }
-#endif /* CONFIG_THREAD_LOCAL_PMU */
-
     thread->tcbFlags = flags;
 
 #ifdef CONFIG_HAVE_FPU
@@ -1782,6 +1774,10 @@ exception_t decodeBindVPMU(cap_t cap)
         current_syscall_error.type = seL4_IllegalOperation;
         return EXCEPTION_SYSCALL_ERROR;
     }
+
+    /* Save the current PMU state to the core global state, and load the VPMU state.*/
+    savePmuState(&ARCH_NODE_STATE(cpu_pmu_state));
+    loadPmuState(pmuPtr);
 
     /* Set the pointer in the arch TCB to the pmuPtr from the VPMU cap
     we have been passed in. */
