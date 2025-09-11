@@ -1747,7 +1747,7 @@ exception_t decodeUnbindNotification(cap_t cap)
 #ifdef CONFIG_THREAD_LOCAL_PMU
 exception_t decodeBindVPMU(cap_t cap)
 {
-    user_pmu_state_t *pmuPtr;
+    pmu_state_t *pmuPtr;
     tcb_t *tcb;
     cap_t vpmu;
 
@@ -1770,7 +1770,7 @@ exception_t decodeBindVPMU(cap_t cap)
     if (cap_get_capType(vpmu) == cap_vpmu_cap) {
         pmuPtr = VPMU_PTR(cap_vpmu_cap_get_capPMUPtr(vpmu));
     } else {
-        userError("TCB BindVPMU: Notification is invalid.");
+        userError("TCB BindVPMU: Not a valid VPMU cap.");
         current_syscall_error.type = seL4_IllegalOperation;
         return EXCEPTION_SYSCALL_ERROR;
     }

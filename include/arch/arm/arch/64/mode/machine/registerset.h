@@ -275,7 +275,7 @@ typedef struct pmu_state {
     /* PMU Overflow flag status register */
     uint32_t pmovsclr;
     /* PMU Interrupt enable set register */
-    uint32_t pmitenset;
+    uint32_t pmintenset;
 } pmu_state_t;
 #endif /* CONFIG_THREAD_LOCAL_PMU */
 

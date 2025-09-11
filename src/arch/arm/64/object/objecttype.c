@@ -328,7 +328,11 @@ bool_t CONST Arch_sameRegionAs(cap_t cap_a, cap_t cap_b)
 #endif
 #ifdef CONFIG_THREAD_LOCAL_PMU
     case cap_vpmu_cap:
-        if (cap_get_capType(cap_b) == )
+        if (cap_get_capType(cap_b) == cap_vpmu_cap) {
+            return cap_vpmu_cap_get_capPMUPtr(cap_a) ==
+                   cap_vpmu_cap_get_capPMUPtr(cap_b);
+        }
+        break;
 #endif
     }
     return false;
@@ -383,7 +387,7 @@ word_t Arch_getObjectSize(word_t t)
         return VCPU_SIZE_BITS;
 #endif
 #ifdef CONFIG_THREAD_LOCAL_PMU
-    case seL4_ARM_VPMU:
+    case seL4_ARM_VPMUObject:
         return seL4_VPMUBits;
 #endif
     default:
@@ -515,7 +519,7 @@ cap_t Arch_createObject(object_t t, void *regionBase, word_t userSize, bool_t de
         return cap_vcpu_cap_new(VCPU_REF(regionBase));
 #endif
 #ifdef CONFIG_THREAD_LOCAL_PMU
-    case seL4_ARM_VPMU:
+    case seL4_ARM_VPMUObject:
         return cap_vpmu_cap_new((word_t)regionBase);
 #endif
     default:
@@ -531,7 +535,8 @@ exception_t Arch_decodeInvocation(word_t label, word_t length, cptr_t cptr,
     /* The C parser cannot handle a switch statement with only a default
      * case. So we need to do some gymnastics to remove the switch if
      * there are no other cases */
-#if defined(CONFIG_ARM_HYPERVISOR_SUPPORT) || defined(CONFIG_ARM_SMMU) || defined(CONFIG_ALLOW_SMC_CALLS) || !defined(CONFIG_ENABLE_SMP_SUPPORT)
+#if defined(CONFIG_ARM_HYPERVISOR_SUPPORT) || defined(CONFIG_ARM_SMMU) || defined(CONFIG_ALLOW_SMC_CALLS) || !defined(CONFIG_ENABLE_SMP_SUPPORT) || \
+    defined(CONFIG_THREAD_LOCAL_PMU)
     switch (cap_get_capType(cap)) {
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
     case cap_vcpu_cap:
@@ -554,6 +559,10 @@ exception_t Arch_decodeInvocation(word_t label, word_t length, cptr_t cptr,
 #ifdef CONFIG_ALLOW_SMC_CALLS
     case cap_smc_cap:
         return decodeARMSMCInvocation(label, length, cptr, slot, cap, call, buffer);
+#endif
+#ifdef CONFIG_THREAD_LOCAL_PMU
+    case cap_vpmu_cap:
+        return decodeARMVPMUInvocation(label, length, cptr, slot, cap, call, buffer);
 #endif
     case cap_pmu_control_cap:
         return decodePMUControlInvocation(label, length, cptr, slot, cap, call, buffer);

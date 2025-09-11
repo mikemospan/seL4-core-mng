@@ -17,13 +17,14 @@
 #include <arch/machine/registerset.h>
 
 typedef struct arch_tcb {
+#ifdef CONFIG_THREAD_LOCAL_PMU
+    pmu_state_t *pmuState;
+#endif /* CONFIG_THREAD_LOCAL_PMU */
     user_context_t tcbContext;
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
     struct vcpu *tcbVCPU;
 #endif
-#ifdef CONFIG_THREAD_LOCAL_PMU
-    pmu_state_t *pmuState;
-#endif /* CONFIG_THREAD_LOCAL_PMU */
+
 } arch_tcb_t;
 
 enum vm_rights {

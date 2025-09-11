@@ -146,7 +146,7 @@ finaliseCap_ret_t finaliseCap(cap_t cap, bool_t final, bool_t exposed)
                     break;
                 default:
                     fail("Invalid tcb state");
-                }
+                } 
             }
         }
         fc_ret.remainder = cap_null_cap_new();
@@ -779,9 +779,6 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
         }
         sched_context_t *sc = SC_PTR(cap_sched_context_cap_get_capSCPtr(cap));
         return decodeSchedContextInvocation(invLabel, sc, call);
-#ifdef CONFIG_THREAD_LOCAL_PMU
-        return decode
-#endif
 #endif
     default:
         fail("Invalid cap type");

@@ -414,4 +414,182 @@
 
     </interface>
 
+    <interface name="seL4_ARM_VPMU" manual_name="VPMU" cap_description="Virtual PMU object that mimics the underlying hardware">
+        <method id="VPMUReadEventCounter" name="VPMUReadEventCounter" manual_name="VPMUReadEventCounter" manual_label="vpmucontrol_readeventcounter">
+            <brief>
+                Read the VPMU counter associated with the specified input paramater.
+            </brief>
+            <description>
+                See <autoref label="sec:threads"/>
+            </description>
+            <return><errorenumdesc/></return>
+            <param dir="in" name="counter" type="seL4_Word"
+                description="Hardware counter number you wish to read from."/>
+            <param dir="out" name="counter_value" type="seL4_Word"
+                description="Value read from the hardware counter." />
+            <error name="seL4_IllegalOperation">
+                <description>
+                    The <texttt text="_service"/> is a CPtr to a capability of the wrong type.
+                </description>
+            </error>
+            <error name="seL4_RangeError">
+                <description>
+                    The <texttt text="counter"/> less than 0, or greater than the number of hardware counters
+                    present.
+                </description>
+            </error>
+        </method>
+
+        <method id="VPMUWriteEventCounter" name="VPMUWriteEventCounter" manual_name="VPMUWriteEventCounter" manual_label="vpmucontrol_writeeventcounter">
+            <brief>
+                Write the VPMU counter value and event type associated with the specified input paramater.
+            </brief>
+            <description>
+                See <autoref label="sec:threads"/>
+            </description>
+            <return><errorenumdesc/></return>
+            <param dir="in" name="counter" type="seL4_Word"
+                description="Hardware counter number you wish to write to."/>
+            <param dir="in" name="counter_value" type="seL4_Word"
+                description="Value you wish to set the hardware counter to."/>
+            <param dir="in" name="event_type" type="seL4_Word"
+                description="The micro-architectural event that you wish to count."/>
+            <error name="seL4_IllegalOperation">
+                <description>
+                    The <texttt text="_service"/> is a CPtr to a capability of the wrong type.
+                </description>
+            </error>
+            <error name="seL4_RangeError">
+                <description>
+                    The <texttt text="counter"/> less than 0, or greater than the number of hardware counters
+                    present.
+                </description>
+            </error>
+        </method>
+
+        <method id="VPMUReadCycleCounter" name="VPMUReadCycleCounter" manual_name="VPMUReadCycleCounter" manual_label="vpmucontrol_readcyclecounter">
+            <brief>
+                Read the VPMU cycle counter.
+            </brief>
+            <description>
+                See <autoref label="sec:threads"/>
+            </description>
+            <return><errorenumdesc/></return>
+            <param dir="out" name="cycle_counter_value" type="seL4_Word"
+                description="Value read from the hardware counter." />
+            <error name="seL4_IllegalOperation">
+                <description>
+                    The <texttt text="_service"/> is a CPtr to a capability of the wrong type.
+                </description>
+            </error>
+        </method>
+
+        <method id="VPMUWriteCycleCounter" name="VPMUWriteCycleCounter" manual_name="VPMUWriteCycleCounter" manual_label="vpmucontrol_writecyclecounter">
+            <brief>
+                Write to the VPMU cycle counter value.
+            </brief>
+            <description>
+                See <autoref label="sec:threads"/>
+            </description>
+            <return><errorenumdesc/></return>
+            <param dir="in" name="counter_value" type="seL4_Word"
+                description="Value you wish to set the hardware counter to."/>
+            <error name="seL4_IllegalOperation">
+                <description>
+                    The <texttt text="_service"/> is a CPtr to a capability of the wrong type.
+                </description>
+            </error>
+        </method>
+
+        <method id="VPMUCounterControl" name="VPMUCounterControl" manual_name="VPMUCounterControl" manual_label="vpmucontrol_countercontrol">
+            <brief>
+                Start, stop or reset the VPMU.
+            </brief>
+            <description>
+                See <autoref label="sec:threads"/>
+            </description>
+            <return><errorenumdesc/></return>
+            <param dir="in" name="control" type="seL4_Word"
+                description="This is the action we wish to control. 0 - stop, 1 - start, 2 - reset"/>
+            <error name="seL4_IllegalOperation">
+                <description>
+                    The <texttt text="_service"/> is a CPtr to a capability of the wrong type.
+                </description>
+            </error>
+            <error name="seL4_RangeError">
+                <description>
+                    The <texttt text="counter"/> less than 0, or greater than the number of hardware counters
+                    present.
+                </description>
+            </error>
+        </method>
+
+        <method id="VPMUReadInterruptValue" name="VPMUReadInterruptValue" manual_name="VPMUReadInterruptValue" manual_label="vpmucontrol_readinterruptvalue">
+            <brief>
+                Get the interrupt value of the VPMU.
+            </brief>
+            <description>
+                See <autoref label="sec:threads"/>
+            </description>
+            <return><errorenumdesc/></return>
+            <param dir="out" name="interrupt_val" type="seL4_Word"
+                description="This is the return value of the interrupt value."/>
+            <error name="seL4_IllegalOperation">
+                <description>
+                    The <texttt text="_service"/> is a CPtr to a capability of the wrong type.
+                </description>
+            </error>
+        </method>
+
+        <method id="VPMUWriteInterruptValue" name="VPMUWriteInterruptValue" manual_name="VPMUWriteInterruptValue" manual_label="vpmucontrol_writeinterruptvalue">
+            <brief>
+                Write a value to the interrupt value register.
+            </brief>
+            <description>
+                See <autoref label="sec:threads"/>
+            </description>
+            <return><errorenumdesc/></return>
+            <param dir="in" name="interrupt_val" type="seL4_Word"
+                description="This is the value that will be written to the interrupt value register"/>
+            <error name="seL4_IllegalOperation">
+                <description>
+                    The <texttt text="_service"/> is a CPtr to a capability of the wrong type.
+                </description>
+            </error>
+        </method>
+
+        <method id="VPMUInterruptControl" name="VPMUInterruptControl" manual_name="VPMUInterruptControl" manual_label="vpmucontrol_interruptcontrol">
+            <brief>
+                Set the value of the interrupt control register
+            </brief>
+            <description>
+                See <autoref label="sec:threads"/>
+            </description>
+            <return><errorenumdesc/></return>
+            <param dir="in" name="interrupt_ctl" type="seL4_Word"
+                description="The counters that you wish to enable interrupts for."/>
+            <error name="seL4_IllegalOperation">
+                <description>
+                    The <texttt text="_service"/> is a CPtr to a capability of the wrong type.
+                </description>
+            </error>
+        </method>
+
+        <method id="VPMUNumCounters" name="VPMUNumCounters" manual_name="VPMUNumCounters" manual_label="vpmucontrol_numcounters">
+            <brief>
+                Get the number of event counters available on this platform
+            </brief>
+            <description>
+                See <autoref label="sec:threads"/>
+            </description>
+            <return><errorenumdesc/></return>
+            <param dir="out" name="num_counters" type="seL4_Word"
+                description="This is the number of hardware performance counters read available, as read from the PMU."/>
+            <error name="seL4_IllegalOperation">
+                <description>
+                    The <texttt text="_service"/> is a CPtr to a capability of the wrong type.
+                </description>
+            </error>
+        </method>
+    </interface>
 </api>

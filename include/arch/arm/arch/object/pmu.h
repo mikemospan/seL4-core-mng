@@ -228,7 +228,7 @@ static inline void savePmuState(pmu_state_t *pmu_state)
     MRS(PMCR_EL0, pmu_state->pmcr);
     MRS(PMCNTENSET_EL0, pmu_state->pmcntenset);
     MRS(PMOVSCLR_EL0, pmu_state->pmovsclr);
-    MRS(PMINTENSET_EL1, pmu_state->pmitenset);
+    MRS(PMINTENSET_EL1, pmu_state->pmintenset);
 }
 
 /* Load the PMU state from the user context into the PMU */
@@ -241,7 +241,7 @@ static inline void loadPmuState(pmu_state_t *pmu_state)
     MSR(PMCR_EL0, pmu_state->pmcr);
     MSR(PMCNTENSET_EL0, pmu_state->pmcntenset);
     MSR(PMOVSCLR_EL0, pmu_state->pmovsclr);
-    MSR(PMINTENSET_EL1, pmu_state->pmitenset);
+    MSR(PMINTENSET_EL1, pmu_state->pmintenset);
 
     MSR(PMU_CYCLE_CTR, pmu_state->cycle_counter);
 

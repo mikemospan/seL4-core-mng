@@ -24,6 +24,7 @@ typedef seL4_CPtr seL4_ARM_CBControl;
 typedef seL4_CPtr seL4_ARM_CB;
 typedef seL4_CPtr seL4_ARM_SMC;
 typedef seL4_CPtr seL4_ARM_PMUControl;
+typedef seL4_CPtr seL4_ARM_VPMU;
 typedef seL4_CPtr seL4_ARM_SGI_Signal;
 
 typedef enum {

@@ -20,7 +20,7 @@ typedef enum _object {
     seL4_ARM_VCPUObject,
 #endif
 #ifdef CONFIG_THREAD_LOCAL_PMU
-    seL4_ARM_VPMU,
+    seL4_ARM_VPMUObject,
 #endif
 #ifdef CONFIG_TK1_SMMU
     seL4_ARM_IOPageTableObject,

@@ -20,6 +20,10 @@
 #include <arch/object/smc.h>
 #endif
 
+#ifdef CONFIG_THREAD_LOCAL_PMU
+#include <arch/object/vpmu.h>
+#endif
+
 #include <arch/object/pmu.h>
 
 /* The top level asid mapping table */

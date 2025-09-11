@@ -182,9 +182,17 @@ typedef enum {
 #define seL4_VPMUBits 9
 #endif
 #if defined(CONFIG_HARDWARE_DEBUG_API) || defined(CONFIG_ARM_HYP_ENABLE_VCPU_CP14_SAVE_AND_RESTORE)
+#ifdef CONFIG_THREAD_LOCAL_PMU
+#define seL4_TCBBits 13
+#else
+#define seL4_TCBBits 12
+#endif
+#else
+#ifdef CONFIG_THREAD_LOCAL_PMU
 #define seL4_TCBBits 12
 #else
 #define seL4_TCBBits 11
+#endif
 #endif
 
 #define seL4_EndpointBits 4
