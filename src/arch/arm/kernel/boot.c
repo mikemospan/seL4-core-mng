@@ -671,7 +671,7 @@ BOOT_CODE VISIBLE void init_kernel(
 
 #ifdef ENABLE_SMP_SUPPORT
     /* we assume there exists a cpu with id 0 and will use it for bootstrapping */
-    if (getCurrentCPUIndex() == 0) {
+    if (getCurrentCPUIndex() == 0 && ksNumCPUs == 0) {
         result = try_init_kernel(ui_p_reg_start,
                                  ui_p_reg_end,
                                  pv_offset,
