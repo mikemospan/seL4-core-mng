@@ -13,7 +13,7 @@
 static exception_t Arch_invokeIRQControl(irq_t irq, cte_t *handlerSlot, cte_t *controlSlot, bool_t trigger)
 {
 #ifdef HAVE_SET_TRIGGER
-    setIRQTrigger(irq, trigger);
+    plat_setIRQTrigger(irq, trigger);
 #endif
     return invokeIRQControl(irq, handlerSlot, controlSlot);
 }
@@ -184,7 +184,7 @@ exception_t Arch_decodeIRQControlInvocation(word_t invLabel, word_t length,
          * target core to which the shared interrupt will be physically delivered.
          */
         if (!IRQ_IS_PPI(irq)) {
-            setIRQTarget(irq, target);
+            plat_setIRQTarget(irq, target);
         }
         return Arch_invokeIRQControl(irq, destSlot, srcSlot, trigger);
 #endif /* ENABLE_SMP_SUPPORT */
