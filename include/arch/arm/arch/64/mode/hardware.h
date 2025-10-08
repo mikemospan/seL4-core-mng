@@ -11,6 +11,7 @@
 #include <arch/machine/hardware.h>
 #include <sel4/plat/api/constants.h>
 
+/* TODO: Update this diagram. */
 /* EL2 kernel address map:
  *
  * The EL2 mode kernel uses TTBR0_EL2 which covers the range of
@@ -57,7 +58,7 @@
  *          2^64 +-------------------+
  *               | Kernel Page PDPT  | --+
  *   2^64 - 2^39 +-------------------+ PPTR_BASE
- *               |    TLB Bitmaps    |   |
+ *               |    TLB Bitmaps    |   |                  // FIXME: TLB Bitmaps are an x86 thing?
  *               +-------------------+   |
  *               |                   |   |
  *               |     Unmapped      |   |
@@ -173,42 +174,50 @@
 /* The base address in virtual memory to use for the 1:1 physical memory
  * mapping */
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-#define PPTR_BASE UL_CONST(0x0000008000000000)
+#define PPTR_BASE UL_CONST(0x0000008000000000)  /* 2^48 - 2^39 */
 #else
-#define PPTR_BASE UL_CONST(0xffffff8000000000)
+#define PPTR_BASE UL_CONST(0xffffff8000000000)  /* 2^464 - 2^39 */
 #endif
 
-/* Top of the physical memory window */
+/* Top of the physical memory window; exclusive. */
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-#define PPTR_TOP UL_CONST(0x000000ffc0000000)
+#define PPTR_TOP UL_CONST(0x000000ffc0000000)   /* 2^48 - 2^30 */
 #else
-#define PPTR_TOP UL_CONST(0xffffffffc0000000)
+#define PPTR_TOP UL_CONST(0xffffffffc0000000)   /* 2^64 - 2^30 */
 #endif
 
 /* The physical memory address to use for mapping the kernel ELF */
 #define KERNEL_ELF_PADDR_BASE physBase()
 /* For use by the linker (only integer constants allowed) */
-#define KERNEL_ELF_PADDR_BASE_RAW PHYS_BASE_RAW
+#define KERNEL_ELF_PADDR_BASE_RAW (PHYS_BASE_RAW)
 
-/* The base address in virtual memory to use for the kernel ELF mapping */
-#define KERNEL_ELF_BASE (PPTR_BASE_OFFSET + KERNEL_ELF_PADDR_BASE)
-/* For use by the linker (only integer constants allowed) */
-#define KERNEL_ELF_BASE_RAW (PPTR_BASE_OFFSET + KERNEL_ELF_PADDR_BASE_RAW)
-
-/* This is a page table mapping at the end of the virtual address space
- * to map objects with 4KiB pages rather than 4MiB large pages. */
+/* The KERNEL_ELF_BASE virtual address is placed at an arbitrary high memory
+ * address above PPTR_TOP. It is mapped using 2MiB pages.
+ * Arbitrarily, it is placed directly above PPTR_TOP.
+ */
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-#define KERNEL_PT_BASE UL_CONST(0x000000ffffe00000)
+#define KERNEL_ELF_BASE UL_CONST(0x000000ffc0000000)  /* 2^48 - 2^30 */
 #else
-#define KERNEL_PT_BASE UL_CONST(0xffffffffffe00000)
+#define KERNEL_ELF_BASE UL_CONST(0xffffffffc0000000)  /* 2^64 - 2^30 */
 #endif
 
-/* The base address in virtual memory to use for the kernel device
- * mapping region. These are mapped in the kernel page table. */
-#define KDEV_BASE KERNEL_PT_BASE
+/* For use by the linker (as it is shared with arm32) */
+#define KERNEL_ELF_BASE_RAW KERNEL_ELF_BASE
 
-/* The log buffer is placed before the device region */
-#define KS_LOG_PPTR (KDEV_BASE - UL_CONST(0x200000))
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+/* The base address in virtual memory to use for kernel devices, which are
+ * mapped using a PT containing 4K pages.  */
+#define KDEV_BASE UL_CONST(0x000000ffffe00000)  /* 2^48 - 2^21 */
+#else
+#define KDEV_BASE UL_CONST(0xffffffffffe00000)  /* 2^64 - 2^21 */
+#endif
+
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+/* The log buffer is placed before the device region using a 2MiB page. */
+#define KS_LOG_BASE UL_CONST(0x000000ffffc00000)  /* 2^48 - 2 * 2^21 */
+#else
+#define KS_LOG_BASE UL_CONST(0xffffffffffc00000)  /* 2^64 - 2 * 2^21 */
+#endif
 
 #ifndef __ASSEMBLER__
 /* All PPTR addresses must be canonical to be able to be stored in caps or objects.

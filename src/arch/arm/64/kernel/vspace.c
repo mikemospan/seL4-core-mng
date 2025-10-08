@@ -245,7 +245,6 @@ compile_assert(physical_window_pgd_location,
 /* make sure that the PPTR_BASE and PPTR_TOP are huge paged aligned */
 compile_assert(physical_window_base_aligned, IS_ALIGNED(PPTR_BASE, seL4_HugePageBits));
 compile_assert(physical_window_top_aligned, IS_ALIGNED(PPTR_TOP, seL4_HugePageBits));
-compile_assert(huge_page_is_lvl1, GET_KLVL_PGSIZE_BITS(1) == seL4_HugePageBits);
 
 /* the PPTR_BASE starts from the bottom of the kernel PUD */
 compile_assert(physical_window_bottom_kernel_region,
@@ -301,6 +300,42 @@ BOOT_CODE void map_kernel_physical_window(void)
     }
 }
 
+BOOT_CODE void map_kernel_elf_image(const word_t kernel_mappings_pud_idx)
+{
+    compile_assert(elf_paddr_aligned, IS_ALIGNED(KERNEL_ELF_PADDR_BASE_RAW, seL4_LargePageBits));
+    compile_assert(elf_base_aligned, IS_ALIGNED(KERNEL_ELF_BASE, seL4_LargePageBits));
+    /* asserts because ELF_TOP is dynamic */
+    assert(GET_KPT_INDEX(KERNEL_ELF_BASE, KLVL_FRM_ARM_PT_LVL(1)) == kernel_mappings_pud_idx);
+    assert(GET_KPT_INDEX(KERNEL_ELF_TOP, KLVL_FRM_ARM_PT_LVL(1)) == kernel_mappings_pud_idx);
+    assert(KERNEL_ELF_TOP <= KDEV_BASE);
+
+    const word_t kernel_elf_pd_start = GET_KPT_INDEX(KERNEL_ELF_BASE, KLVL_FRM_ARM_PT_LVL(2));
+    const word_t kernel_elf_pd_end   = GET_KPT_INDEX(KERNEL_ELF_TOP, KLVL_FRM_ARM_PT_LVL(2));
+
+    word_t paddr = KERNEL_ELF_PADDR_BASE;
+    word_t vaddr = KERNEL_ELF_BASE;
+    for (word_t pd_idx = kernel_elf_pd_start; pd_idx < kernel_elf_pd_end; pd_idx++) {
+        armKSGlobalKernelPDs[kernel_mappings_pud_idx][pd_idx]
+            = pte_pte_page_new(
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+                  /* XN */ 0,
+#else
+                  /* UXN */ 1,
+#endif
+                  /* page_base_address */ paddr,
+                  /* global (nG) */ 0,
+                  /* access flag (AF) */ 1,
+                  /* shareability (SH) */ SMP_TERNARY(SMP_SHARE, 0),
+                  /* AP */ APFromVMRights(VMKernelOnly),
+                  /* AttrIndx */ NORMAL
+              );
+
+        assert(pd_idx == GET_KPT_INDEX(vaddr, KLVL_FRM_ARM_PT_LVL(2)));
+        paddr += BIT(seL4_LargePageBits);
+        vaddr += BIT(seL4_LargePageBits);
+    }
+}
+
 /* work around the fact that C doesn't have real constants */
 #define kernel_mappings_pud_idx (GET_KPT_INDEX(PPTR_TOP, KLVL_FRM_ARM_PT_LVL(1)))
 #define device_mapping_pd_idx (GET_KPT_INDEX(KDEV_BASE, KLVL_FRM_ARM_PT_LVL(2)))
@@ -319,6 +354,8 @@ BOOT_CODE void map_kernel_window(void)
     /* put the PD into the PUD for kernel mappings */
     armKSGlobalKernelPUD[kernel_mappings_pud_idx]
         = pte_pte_table_new(addrFromKPPtr(&armKSGlobalKernelPDs[kernel_mappings_pud_idx][0]));
+
+    map_kernel_elf_image(kernel_mappings_pud_idx);
 
     /* put the PT into the PD for device window */
     armKSGlobalKernelPDs[kernel_mappings_pud_idx][device_mapping_pd_idx]
