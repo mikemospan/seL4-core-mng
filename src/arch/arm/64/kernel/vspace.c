@@ -309,6 +309,34 @@ BOOT_CODE void map_kernel_elf_image(const word_t kernel_mappings_pud_idx)
     assert(GET_KPT_INDEX(KERNEL_ELF_TOP, KLVL_FRM_ARM_PT_LVL(1)) == kernel_mappings_pud_idx);
     assert(KERNEL_ELF_TOP <= KDEV_BASE);
 
+    /**
+     *  Per ARM ARM DDI 0487 (version L.b), in B2.11 "Mismatched memory attributes",
+     *  when physical memory locations are accessed with mismatched attributes
+     *  (caching, memory type (device/normal), shareability), the coherency of these
+     *  memory locations may be lost, as well as various violations of read and
+     *  write orderings or atomic operations. Other ARM documents refer to the
+     *  situation in which two virtual addresses map to the same physical address as
+     *  "Memory aliasing" (e.g. Document ID 102376 0200_01_en).
+     *
+     *  Currently, the memory attributes used in the physical memory window does
+     *  match that of the kernel ELF mapping, so this is OK. At the same time,
+     *  the current physical window mapping does use NORMAL memory covering memory
+     *  that is not DRAM, which is questionable for newer processors with more
+     *  speculative execution.
+     *
+     *  Hence, the kernel should never access kernel ELF memory through the physical
+     *  memory window, i.e., never modify the result of `ptrFromPAddr()` when the
+     *  physical address might lie within the kernel ELF. (Reads are fine if they
+     *  have been flushed appropriately per B2.11; this should be the case for
+     *  any paging structures).
+     *
+     *  As an addendum, LWN Article "ARM's multiply-mapped memory mess" specifies
+     *  that in ARMv6 specifications this kind of aliasing would be UNPREDICTABLE;
+     *  the current ARMv8 A-Profile specifications no longer contain this wording,
+     *  and instead specify the loss of coherency and other behaviours in B2.11.
+     *
+     */
+
     const word_t kernel_elf_pd_start = GET_KPT_INDEX(KERNEL_ELF_BASE, KLVL_FRM_ARM_PT_LVL(2));
     const word_t kernel_elf_pd_end   = GET_KPT_INDEX(KERNEL_ELF_TOP, KLVL_FRM_ARM_PT_LVL(2));
 
