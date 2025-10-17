@@ -83,10 +83,9 @@
  *    the 512 GiB at the top of that 48 bits of addressable
  *    virtual memory.
  *
- *    In EL2 there is no canonical-high portion of the address space since
- *    address tagging is not supported in EL2. Therefore the kernel is linked
- *    to the canonical lower portion of the address space (all the unused top bits
- *    are set to 0, not 1).
+ *    In EL2 there is only a TTBR1_EL2 register (unlike EL1 with TTBR0 and TTBR1)
+ *    so the kernel is linked in the low 2^48 bits of the virtual address space,
+ *    or "lower VA" in EL1 parlance.
  *
  *    The memory map used by the EL2 kernel's separate address space
  *    ends up looking something like this:
