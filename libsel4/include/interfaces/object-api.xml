@@ -1281,6 +1281,30 @@
             </error>
         </method>
 
+        <method id="IRQSetIRQCore" name="SetCore" manual_name="Set Core" manual_label="irq_handlersetcore">
+            <brief>
+                Set the notification which the kernel will signal on interrupts controlled by the supplied IRQ handler capability
+            </brief>
+
+            <description>
+                <docref> See <autoref label="sec:interrupts"/>. </docref>
+            </description>
+
+            <param dir="in" name="core" type="seL4_Word" description="The core which the IRQs will run on."/>
+
+            <error name="seL4_IllegalOperation">
+                <description>
+                    The <texttt text="_service"/> is a CPtr to a capability of the wrong type.
+                </description>
+
+            </error>
+            <error name="seL4_InvalidCapability">
+                <description>
+                    The <texttt text="_service"/> or <texttt text="notification"/> is a CPtr to a capability of the wrong type.
+                </description>
+            </error>
+        </method>
+
         <method id="IRQClearIRQHandler" name="Clear" manual_label="irq_handlerclear">
             <brief>
                 Clear the handler capability from the IRQ slot

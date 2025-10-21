@@ -18,6 +18,7 @@ exception_t invokeIRQControl(irq_t irq, cte_t *handlerSlot, cte_t *controlSlot);
 exception_t decodeIRQHandlerInvocation(word_t invLabel, irq_t irq);
 void invokeIRQHandler_AckIRQ(irq_t irq);
 void invokeIRQHandler_SetIRQHandler(irq_t irq, cap_t cap, cte_t *slot);
+void invokeIRQHandler_SetIRQCore(irq_t irq, word_t core);
 void invokeIRQHandler_ClearIRQHandler(irq_t irq);
 void deletingIRQHandler(irq_t irq);
 void deletedIRQHandler(irq_t irq);

@@ -198,6 +198,17 @@ BOOT_CODE static void gicr_locate_interface(void)
                               MPIDR_AFF0(mpidr))) {
 
             word_t gicr = (word_t)gicr_base + offset;
+#ifdef CONFIG_ARCH_AARCH64
+            if (ksNumCPUs < CONFIG_MAX_NUM_NODES) {
+                if (gic_rdist_map[core_id] != NULL || gic_rdist_sgi_ppi_map[core_id] != NULL) {
+                    printf("GICv3: %s[%d] %p is not null\n",
+                            gic_rdist_map[core_id] == NULL ? "gic_rdist_map" : "gic_rdist_sgi_ppi_map",
+                            core_id,
+                            gic_rdist_map[core_id] == NULL ? (void *)gic_rdist_map[core_id] : (void *)gic_rdist_sgi_ppi_map[core_id]);
+                    halt();
+                }
+            }
+#else
             if (gic_rdist_map[core_id] != NULL || gic_rdist_sgi_ppi_map[core_id] != NULL) {
                 printf("GICv3: %s[%d] %p is not null\n",
                        gic_rdist_map[core_id] == NULL ? "gic_rdist_map" : "gic_rdist_sgi_ppi_map",
@@ -205,6 +216,7 @@ BOOT_CODE static void gicr_locate_interface(void)
                        gic_rdist_map[core_id] == NULL ? (void *)gic_rdist_map[core_id] : (void *)gic_rdist_sgi_ppi_map[core_id]);
                 halt();
             }
+#endif
             gic_rdist_map[core_id] = (void *)gicr;
             gic_rdist_sgi_ppi_map[core_id] = (void *)(gicr + RDIST_BANK_SZ);
 

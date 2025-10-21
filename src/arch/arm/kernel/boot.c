@@ -295,8 +295,15 @@ BOOT_CODE static bool_t try_init_kernel_secondary_core(void)
 #endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */
     NODE_LOCK_SYS;
 
+#ifdef CONFIG_ARCH_AARCH64
+    if (ksNumCPUs < CONFIG_MAX_NUM_NODES) {
+        clock_sync_test();
+        ksNumCPUs++;
+    }
+#else
     clock_sync_test();
     ksNumCPUs++;
+#endif
 
     init_core_state(SchedulerAction_ResumeCurrentThread);
 
@@ -665,7 +672,7 @@ BOOT_CODE VISIBLE void init_kernel(
 
 #ifdef ENABLE_SMP_SUPPORT
     /* we assume there exists a cpu with id 0 and will use it for bootstrapping */
-    if (getCurrentCPUIndex() == 0) {
+    if (getCurrentCPUIndex() == 0 && ksNumCPUs == 0) {
         result = try_init_kernel(ui_p_reg_start,
                                  ui_p_reg_end,
                                  pv_offset,

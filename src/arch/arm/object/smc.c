@@ -10,6 +10,8 @@
 
 compile_assert(n_msgRegisters_less_than_smc_regs, n_msgRegisters <= NUM_SMC_REGS);
 
+#define PSCI_CPU_OFF    0x84000002
+
 static exception_t invokeSMCCall(word_t *buffer, bool_t call)
 {
     word_t i;
@@ -30,10 +32,21 @@ static exception_t invokeSMCCall(word_t *buffer, bool_t call)
     register seL4_Word r5 asm("x5") = arg[5];
     register seL4_Word r6 asm("x6") = arg[6];
     register seL4_Word r7 asm("x7") = arg[7];
-    asm volatile("smc #0\n"
-                 : "+r"(r0), "+r"(r1), "+r"(r2), "+r"(r3),
-                 "+r"(r4), "+r"(r5), "+r"(r6), "+r"(r7)
-                 :: "x8", "x9", "x10", "x11", "x12", "x13", "x14", "x15", "x16", "x17", "memory");
+
+    if (r0 == PSCI_CPU_OFF) {
+        NODE_UNLOCK_IF_HELD;
+
+        asm volatile("smc #0\n"
+                    : "+r"(r0), "+r"(r1), "+r"(r2), "+r"(r3),
+                    "+r"(r4), "+r"(r5), "+r"(r6), "+r"(r7)
+                    :: "x8", "x9", "x10", "x11", "x12", "x13", "x14", "x15", "x16", "x17", "memory");
+
+        UNREACHABLE();
+    } else {
+        asm volatile("smc #0\n"
+                    : "+r"(r0), "+r"(r1), "+r"(r2), "+r"(r3),
+                    "+r"(r4), "+r"(r5), "+r"(r6), "+r"(r7)
+                    :: "x8", "x9", "x10", "x11", "x12", "x13", "x14", "x15", "x16", "x17", "memory");
 
     arg[0] = r0;
     arg[1] = r1;
