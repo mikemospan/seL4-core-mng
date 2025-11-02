@@ -8,9 +8,11 @@
 #ifdef CONFIG_ALLOW_SMC_CALLS
 #include <arch/object/smc.h>
 
-compile_assert(n_msgRegisters_less_than_smc_regs, n_msgRegisters <= NUM_SMC_REGS);
+#define PSCI_CPU_OFF            0x84000002
+#define PSCI_CPU_SUSPEND        0xC4000001
+#define PSCI_POWER_STATE_MASK   (1u << 16)
 
-#define PSCI_CPU_OFF    0x84000002
+compile_assert(n_msgRegisters_less_than_smc_regs, n_msgRegisters <= NUM_SMC_REGS);
 
 static exception_t invokeSMCCall(word_t *buffer, bool_t call)
 {
@@ -33,7 +35,12 @@ static exception_t invokeSMCCall(word_t *buffer, bool_t call)
     register seL4_Word r6 asm("x6") = arg[6];
     register seL4_Word r7 asm("x7") = arg[7];
 
-    if (r0 == PSCI_CPU_OFF) {
+    bool_t is_cpu_off = r0 == PSCI_CPU_OFF;
+    bool_t is_cpu_powerdown = r0 == PSCI_CPU_SUSPEND && (r1 & PSCI_POWER_STATE_MASK);
+    if (is_cpu_off || is_cpu_powerdown) {
+        /* Disable timer interrupts */
+        maskInterrupt(true, CORE_IRQ_TO_IRQT(getCurrentCPUIndex(), KERNEL_TIMER_IRQ));
+
         NODE_UNLOCK_IF_HELD;
 
         asm volatile("smc #0\n"
@@ -47,6 +54,7 @@ static exception_t invokeSMCCall(word_t *buffer, bool_t call)
                     : "+r"(r0), "+r"(r1), "+r"(r2), "+r"(r3),
                     "+r"(r4), "+r"(r5), "+r"(r6), "+r"(r7)
                     :: "x8", "x9", "x10", "x11", "x12", "x13", "x14", "x15", "x16", "x17", "memory");
+    }
 
     arg[0] = r0;
     arg[1] = r1;
