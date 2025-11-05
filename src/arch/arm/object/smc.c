@@ -26,34 +26,44 @@ static exception_t invokeSMCCall(word_t *buffer, bool_t call)
 
     ipcBuffer = lookupIPCBuffer(true, NODE_STATE(ksCurThread));
 
-    register seL4_Word r0 asm("x0") = arg[0];
-    register seL4_Word r1 asm("x1") = arg[1];
-    register seL4_Word r2 asm("x2") = arg[2];
-    register seL4_Word r3 asm("x3") = arg[3];
-    register seL4_Word r4 asm("x4") = arg[4];
-    register seL4_Word r5 asm("x5") = arg[5];
-    register seL4_Word r6 asm("x6") = arg[6];
-    register seL4_Word r7 asm("x7") = arg[7];
+    seL4_Word a0 = arg[0];
+    seL4_Word a1 = arg[1];
+    seL4_Word a2 = arg[2];
+    seL4_Word a3 = arg[3];
+    seL4_Word a4 = arg[4];
+    seL4_Word a5 = arg[5];
+    seL4_Word a6 = arg[6];
+    seL4_Word a7 = arg[7];
 
-    bool_t is_cpu_off = r0 == PSCI_CPU_OFF;
-    bool_t is_cpu_powerdown = r0 == PSCI_CPU_SUSPEND && (r1 & PSCI_POWER_STATE_MASK);
-    if (is_cpu_off || is_cpu_powerdown) {
-        /* Disable timer interrupts */
-        maskInterrupt(true, CORE_IRQ_TO_IRQT(getCurrentCPUIndex(), KERNEL_TIMER_IRQ));
-
+    if (a0 == PSCI_CPU_OFF || a0 == PSCI_CPU_SUSPEND) {
+        /*
+         * Disable timer interrupts to avoid the TF-A from rejecting our request due to
+         * an in-flight interrupt. We also unlock the big kernel lock to allow other
+         * cores to make progress since we don't expect to return.
+         */
+        setIRQState(IRQInactive, CORE_IRQ_TO_IRQT(getCurrentCPUIndex(), KERNEL_TIMER_IRQ));
         NODE_UNLOCK_IF_HELD;
+    }
 
-        asm volatile("smc #0\n"
-                    : "+r"(r0), "+r"(r1), "+r"(r2), "+r"(r3),
-                    "+r"(r4), "+r"(r5), "+r"(r6), "+r"(r7)
-                    :: "x8", "x9", "x10", "x11", "x12", "x13", "x14", "x15", "x16", "x17", "memory");
+    /* Force the values into x0..x7 *immediately before* the SMC */
+    register seL4_Word r0 asm("x0") = a0;
+    register seL4_Word r1 asm("x1") = a1;
+    register seL4_Word r2 asm("x2") = a2;
+    register seL4_Word r3 asm("x3") = a3;
+    register seL4_Word r4 asm("x4") = a4;
+    register seL4_Word r5 asm("x5") = a5;
+    register seL4_Word r6 asm("x6") = a6;
+    register seL4_Word r7 asm("x7") = a7;
 
-        UNREACHABLE();
-    } else {
-        asm volatile("smc #0\n"
-                    : "+r"(r0), "+r"(r1), "+r"(r2), "+r"(r3),
-                    "+r"(r4), "+r"(r5), "+r"(r6), "+r"(r7)
-                    :: "x8", "x9", "x10", "x11", "x12", "x13", "x14", "x15", "x16", "x17", "memory");
+    asm volatile("smc #0\n"
+                : "+r"(r0), "+r"(r1), "+r"(r2), "+r"(r3), "+r"(r4), "+r"(r5), "+r"(r6), "+r"(r7)
+                :: "x8", "x9", "x10", "x11", "x12", "x13", "x14", "x15", "x16", "x17", "memory");
+
+    bool_t was_cpu_standby = a0 == PSCI_CPU_SUSPEND && !(a1 & PSCI_POWER_STATE_MASK);
+    if (was_cpu_standby) {
+        /* Re-aquire the big kernel lock, and also re-enable the timer interrupt. */
+        NODE_LOCK_SYS;
+        setIRQState(IRQTimer, CORE_IRQ_TO_IRQT(getCurrentCPUIndex(), KERNEL_TIMER_IRQ));
     }
 
     arg[0] = r0;
