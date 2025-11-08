@@ -10,7 +10,6 @@
 
 #define PSCI_CPU_OFF            0x84000002
 #define PSCI_CPU_SUSPEND        0xC4000001
-#define PSCI_POWER_STATE_MASK   (1u << 16)
 
 compile_assert(n_msgRegisters_less_than_smc_regs, n_msgRegisters <= NUM_SMC_REGS);
 
@@ -59,7 +58,8 @@ static exception_t invokeSMCCall(word_t *buffer, bool_t call)
                 : "+r"(r0), "+r"(r1), "+r"(r2), "+r"(r3), "+r"(r4), "+r"(r5), "+r"(r6), "+r"(r7)
                 :: "x8", "x9", "x10", "x11", "x12", "x13", "x14", "x15", "x16", "x17", "memory");
 
-    bool_t was_cpu_standby = a0 == PSCI_CPU_SUSPEND && !(a1 & PSCI_POWER_STATE_MASK);
+    word_t psci_power_state_mask = 1 << (a3 ? 30 : 16);
+    bool_t was_cpu_standby = a0 == PSCI_CPU_SUSPEND && !(a1 & psci_power_state_mask);
     if (was_cpu_standby) {
         /* Re-aquire the big kernel lock, and also re-enable the timer interrupt. */
         NODE_LOCK_SYS;
