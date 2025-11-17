@@ -64,9 +64,10 @@ void sendSignal(notification_t *ntfnPtr, word_t badge)
     switch (notification_ptr_get_state(ntfnPtr)) {
     case NtfnState_Idle: {
         tcb_t *tcb = (tcb_t *)notification_ptr_get_ntfnBoundTCB(ntfnPtr);
-        /* Check if we are bound and that thread is waiting for a message */
+        /* Check if we are bound and that thread is waiting for a message (or offline) */
         if (tcb) {
-            if (thread_state_ptr_get_tsType(&tcb->tcbState) == ThreadState_BlockedOnReceive) {
+            if (thread_state_ptr_get_tsType(&tcb->tcbState) == ThreadState_BlockedOnReceive
+                SMP_COND_STATEMENT( || !isCPUOnline(tcb->tcbAffinity))) {
                 /* Send and start thread running */
                 cancelIPC(tcb);
                 setThreadState(tcb, ThreadState_Running);

@@ -300,6 +300,7 @@ BOOT_CODE static bool_t try_init_kernel_secondary_core(void)
         clock_sync_test();
         ksNumCPUs++;
     }
+    setCPUOnline(getCurrentCPUIndex());
 #else
     clock_sync_test();
     ksNumCPUs++;

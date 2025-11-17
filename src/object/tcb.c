@@ -445,12 +445,13 @@ void remoteQueueUpdate(tcb_t *tcb)
         tcb_t *targetCurThread = NODE_STATE_ON_CORE(ksCurThread, tcb->tcbAffinity);
 
         /* reschedule if the target core is idle or we are waking a higher priority thread (or
-         * if a new irq would need to be set on MCS) */
+         * if a new irq would need to be set on MCS, or if the target CPU is offline in SMP) */
         if (targetCurThread == NODE_STATE_ON_CORE(ksIdleThread, tcb->tcbAffinity)  ||
             tcb->tcbPriority > targetCurThread->tcbPriority
 #ifdef CONFIG_KERNEL_MCS
             || NODE_STATE_ON_CORE(ksReprogram, tcb->tcbAffinity)
 #endif
+            SMP_COND_STATEMENT( || !isCPUOnline(tcb->tcbAffinity))
            ) {
             ARCH_NODE_STATE(ipiReschedulePending) |= BIT(tcb->tcbAffinity);
         }

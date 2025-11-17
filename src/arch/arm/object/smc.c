@@ -10,6 +10,8 @@
 
 #define PSCI_CPU_OFF            0x84000002
 #define PSCI_CPU_SUSPEND        0xC4000001
+#define PSCI_EXT_STATE_MASK     30
+#define PSCI_ORIG_STATE_MASK    16
 
 compile_assert(n_msgRegisters_less_than_smc_regs, n_msgRegisters <= NUM_SMC_REGS);
 
@@ -34,13 +36,19 @@ static exception_t invokeSMCCall(word_t *buffer, bool_t call)
     seL4_Word a6 = arg[6];
     seL4_Word a7 = arg[7];
 
+    word_t psci_power_state_mask = 1 << (a3 ? PSCI_EXT_STATE_MASK : PSCI_ORIG_STATE_MASK);
+    bool_t cpu_standby = a0 == PSCI_CPU_SUSPEND && !(a1 & psci_power_state_mask);
+
+    cpu_id_t cpu_index = getCurrentCPUIndex();
     if (a0 == PSCI_CPU_OFF || a0 == PSCI_CPU_SUSPEND) {
         /*
-         * Disable timer interrupts to avoid the TF-A from rejecting our request due to
-         * an in-flight interrupt. We also unlock the big kernel lock to allow other
-         * cores to make progress since we don't expect to return.
+         * Mark the CPU as offline and disable timer interrupts to avoid the TF-A
+         * from rejecting our request due to an in-flight interrupt. We also unlock
+         * the big kernel lock to allow other cores to make progress since we don't
+         * expect to return.
          */
-        setIRQState(IRQInactive, CORE_IRQ_TO_IRQT(getCurrentCPUIndex(), KERNEL_TIMER_IRQ));
+        setCPUOffline(cpu_index);
+        setIRQState(IRQInactive, CORE_IRQ_TO_IRQT(cpu_index, KERNEL_TIMER_IRQ));
         NODE_UNLOCK_IF_HELD;
     }
 
@@ -54,16 +62,36 @@ static exception_t invokeSMCCall(word_t *buffer, bool_t call)
     register seL4_Word r6 asm("x6") = a6;
     register seL4_Word r7 asm("x7") = a7;
 
-    asm volatile("smc #0\n"
-                : "+r"(r0), "+r"(r1), "+r"(r2), "+r"(r3), "+r"(r4), "+r"(r5), "+r"(r6), "+r"(r7)
-                :: "x8", "x9", "x10", "x11", "x12", "x13", "x14", "x15", "x16", "x17", "memory");
+#if defined(CONFIG_PLAT_ZYNQMP)
+    if (cpu_standby) {
+        /*
+         * This is necessary due to a bug in the Xilinx ATF where interrupts
+         * are not routed to EL3, meaning we can never wake up from standby.
+         */
+        __asm__ volatile(
+            "dsb sy\n\t"
+            "wfi\n\t"
+            : : : "memory"
+        );
+    } else {
+#endif
 
-    word_t psci_power_state_mask = 1 << (a3 ? 30 : 16);
-    bool_t was_cpu_standby = a0 == PSCI_CPU_SUSPEND && !(a1 & psci_power_state_mask);
-    if (was_cpu_standby) {
-        /* Re-aquire the big kernel lock, and also re-enable the timer interrupt. */
+    asm volatile("smc #0\n"
+            : "+r"(r0), "+r"(r1), "+r"(r2), "+r"(r3), "+r"(r4), "+r"(r5), "+r"(r6), "+r"(r7)
+            :: "x8", "x9", "x10", "x11", "x12", "x13", "x14", "x15", "x16", "x17", "memory");
+
+#if defined(CONFIG_PLAT_ZYNQMP)
+    }
+#endif
+
+    if (cpu_standby) {
+        /* 
+         * Re-aquire the big kernel lock, re-enable the timer interrupt,
+         * and mark the CPU as online.
+         */
         NODE_LOCK_SYS;
-        setIRQState(IRQTimer, CORE_IRQ_TO_IRQT(getCurrentCPUIndex(), KERNEL_TIMER_IRQ));
+        setIRQState(IRQTimer, CORE_IRQ_TO_IRQT(cpu_index, KERNEL_TIMER_IRQ));
+        setCPUOnline(cpu_index);
     }
 
     arg[0] = r0;
