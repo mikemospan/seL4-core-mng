@@ -295,17 +295,12 @@ BOOT_CODE static bool_t try_init_kernel_secondary_core(void)
 #endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */
     NODE_LOCK_SYS;
 
-#ifdef CONFIG_ARCH_AARCH64
-    if (ksNumCPUs < CONFIG_MAX_NUM_NODES) {
+    DO_IF_COLDBOOT(
         clock_sync_test();
         ksNumCPUs++;
-    }
-    setCPUOnline(getCurrentCPUIndex());
-#else
-    clock_sync_test();
-    ksNumCPUs++;
-#endif
+    );
 
+    setCPUOnline(getCurrentCPUIndex());
     init_core_state(SchedulerAction_ResumeCurrentThread);
 
     return true;

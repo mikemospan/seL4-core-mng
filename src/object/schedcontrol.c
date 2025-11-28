@@ -149,11 +149,25 @@ static exception_t decodeSchedControl_ConfigureFlags(word_t length, cap_t cap, w
                                              flags);
 }
 
+static exception_t decodeSchedControl_CoreStatus(cap_t cap, word_t *buffer)
+{
+    tcb_t *thread = NODE_STATE(ksCurThread);
+    bool_t isOnline = isCPUOnline(cap_sched_control_cap_get_core(cap));
+
+    setRegister(thread, badgeRegister, 0);
+    setMR(thread, buffer, 0, isOnline);
+    setRegister(thread, msgInfoRegister, wordFromMessageInfo(seL4_MessageInfo_new(0, 0, 0, 1)));
+
+    return EXCEPTION_NONE;
+}
+
 exception_t decodeSchedControlInvocation(word_t label, cap_t cap, word_t length, word_t *buffer)
 {
     switch (label) {
     case SchedControlConfigureFlags:
         return  decodeSchedControl_ConfigureFlags(length, cap, buffer);
+    case SchedControlCoreStatus:
+        return  decodeSchedControl_CoreStatus(cap, buffer);
     default:
         userError("SchedControl invocation: Illegal operation attempted.");
         current_syscall_error.type = seL4_IllegalOperation;

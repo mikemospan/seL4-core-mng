@@ -1397,6 +1397,24 @@
             </error>
         </method>
 
+        <method id="SchedControlCoreStatus" name="CoreStatus" manual_name="Core Status" manual_label="schedcontrol_corestatus">
+            <brief>
+                Checks whether a core controlled by a scheduling control capability is online or offline.
+            </brief>
+
+            <description>
+                <docref> See <autoref label="sec:threads"/>. </docref>
+            </description>
+
+            <param dir="out" name="status" type="seL4_Word"/>
+
+             <error name="seL4_InvalidCapability">
+                <description>
+                    The <texttt text="_service"/> or <texttt text="schedcontext"/> is a CPtr to a capability of the wrong type.
+                </description>
+            </error>
+        </method>
+
     </interface>
 
     <interface name="seL4_SchedContext" cap_description="Capability to the scheduling context which is being operated on.">

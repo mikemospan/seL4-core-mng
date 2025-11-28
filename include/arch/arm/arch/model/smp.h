@@ -13,6 +13,13 @@
 #ifdef ENABLE_SMP_SUPPORT
 _Static_assert(CONFIG_MAX_NUM_NODES <= 64, "too many nodes");
 
+#define DO_IF_COLDBOOT(...)                     \
+    do {                                        \
+        if (ksNumCPUs < CONFIG_MAX_NUM_NODES) { \
+            __VA_ARGS__;                        \
+        }                                       \
+    } while (0)
+
 /* Bitmap indicating whether a cpu is online or offline. */
 uint64_t cpu_status = 1; // Core 0 starts as online
 
